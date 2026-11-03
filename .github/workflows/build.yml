@@ -1,4 +1,4 @@
-name: Build USB probe
+name: Build USB probes
 on:
   workflow_dispatch:
   push:
@@ -18,7 +18,7 @@ jobs:
         id: tc
         with:
           path: external/Ndless/ndless-sdk/toolchain/install
-          key: ndless-toolchain-${{ hashFiles('.github/workflows/build.yml') }}
+          key: ndless-toolchain-dc7ac06d97f6d52aeeb53651d517c45b3fcb7c68f1890b85d1f3b66d55eeb2ae
       - name: Build ARM toolchain (long, first run only)
         if: steps.tc.outputs.cache-hit != 'true'
         working-directory: external/Ndless/ndless-sdk/toolchain
@@ -36,9 +36,11 @@ jobs:
           make build-tools
       - name: Host test
         run: make test
-      - name: Build probe
+      - name: Build probes
         run: make
       - uses: actions/upload-artifact@v4
         with:
-          name: usbprobe
-          path: usbprobe.tns
+          name: usbprobes
+          path: |
+            usbprobe.tns
+            usbprobe1b.tns
