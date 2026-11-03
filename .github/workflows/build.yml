@@ -1,0 +1,44 @@
+name: Build USB probe
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Ndless
+        run: git clone --branch master --recurse-submodules https://github.com/ndless-nspire/Ndless.git external/Ndless
+      - name: Host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex libboost-program-options-dev libgmp-dev libmpc-dev libmpfr-dev libtinfo-dev python3-dev texinfo xz-utils zlib1g-dev
+      - name: Cache ARM toolchain
+        uses: actions/cache@v4
+        id: tc
+        with:
+          path: external/Ndless/ndless-sdk/toolchain/install
+          key: ndless-toolchain-${{ hashFiles('.github/workflows/build.yml') }}
+      - name: Build ARM toolchain (long, first run only)
+        if: steps.tc.outputs.cache-hit != 'true'
+        working-directory: external/Ndless/ndless-sdk/toolchain
+        run: PARALLEL="-j$(nproc)" ./build_toolchain.sh
+      - name: PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/external/Ndless/ndless-sdk/toolchain/install/bin" >> "$GITHUB_PATH"
+          echo "$GITHUB_WORKSPACE/external/Ndless/ndless-sdk/bin" >> "$GITHUB_PATH"
+      - name: Build SDK
+        working-directory: external/Ndless/ndless-sdk
+        run: |
+          make build-libsyscalls
+          make build-libndls
+          make build-thirdparty
+          make build-tools
+      - name: Host test
+        run: make test
+      - name: Build probe
+        run: make
+      - uses: actions/upload-artifact@v4
+        with:
+          name: usbprobe
+          path: usbprobe.tns
