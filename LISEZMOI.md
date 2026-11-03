@@ -1,4 +1,4 @@
-# CX Internet - Etape 1 : sonde USB (lecture seule)
+# CX Internet - Etape 1 (sonde) et etape 1b (VID:PID)
 
 Ce programme **ne modifie rien**. Il lit l'etat du controleur USB de ta
 TI-Nspire CX et l'affiche, pour repondre a deux questions :
@@ -57,3 +57,49 @@ cd /chemin/vers/cx-internet && make test && make
   enumerer l'appareil via la pile USB du systeme, comme le fait le lecteur
   media: c'est l'etape 1b, a faire une fois celle-ci validee.
 - Rien ici ne gere le Wi-Fi: pas de pilote RTL8821CU, de WPA2, de TCP/IP ni de HTTPS.
+
+
+---
+
+# Etape 1b : lire le VID:PID (`usbprobe1b.tns`)
+
+Meme methode que le lecteur video (GPLv3): enregistrer un pilote aupres de la
+pile USB du systeme. Ici c'est un **espion**: quand le systeme sonde un appareil,
+il note son identifiant (usb_attach_arg: vendeur, produit, interface, vitesse)
+puis repond "pas pour moi". Il ne prend aucun appareil en charge et n'ecrit dans
+aucun registre USB.
+
+## Ce qui est verifie / pas verifie
+
+- Verifie sur PC et sous emulateur ARM (`make test-arm`): le code resident, avec
+  une fausse chaine device_t -> usb_attach_arg -> device (cas normal, pointeurs
+  invalides, anneau de 4 entrees, aucune ecriture hors du bloc). La syntaxe du
+  programme principal est verifiee contre les en-tetes du SDK Ndless.
+- **Non verifie sur calculatrice**, et pas compile en .tns ici. Surtout, je n'ai pas pu
+  confirmer que l'OS 4.2.0.532 a la meme disposition interne que celle sur
+  laquelle le lecteur video est valide (4.5+).
+- Garde-fous: si la fonction `device_get_ivars` du systeme n'a pas la forme
+  attendue, le programme s'arrete AVANT d'enregistrer quoi que ce soit et affiche
+  deux valeurs (envoie-les moi, elles servent de diagnostic).
+- Si le programme se plante apres l'enregistrement: retire la pile (ou reset au
+  dos) et redemarre; le pilote disparait au redemarrage.
+
+## Utiliser
+
+1. Compile (GitHub Actions: l'artefact `usbprobes` contient les deux .tns) et copie
+   `usbprobe1b.tns` sur la calculatrice.
+2. Branche le cable OTG, lance le programme, Entree: le pilote espion s'installe.
+3. Debranche puis rebranche l'antenne, attends 3 s, choisis "Relire".
+4. Note l'ecran. Ne lance pas le programme deux fois sans redemarrer.
+
+## Lire le resultat
+
+| Ecran | Sens |
+|---|---|
+| `VID:PID 0BDA:C811 ...` | Succes: identifiant lu |
+| "installe, mais rien sonde" | Le systeme n'a pas re-sonde: rebrancher l'antenne, sinon manque de courant |
+| `lecture arretee (etape N/4)` | Le systeme a sonde mais la structure n'a pas la forme attendue: envoie l'ecran |
+| Message "rien n'a ete enregistre" | Garde-fou: envoie les deux valeurs affichees |
+
+Rappel: connaitre le VID:PID ne rend pas le Wi-Fi possible (pas de pilote RTL8821CU,
+WPA2, TCP/IP ni TLS sur la CX). Le VID:PID s'obtient aussi en 10 secondes sur un PC.
