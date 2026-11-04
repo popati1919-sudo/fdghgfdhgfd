@@ -119,12 +119,12 @@ int main(void)
         return 0;
     }
     show_msgbox(TITLE,
-                "Etape 1c: lire les endpoints USB de l'antenne.\n\n"
+                "Etape 1c: relire les informations USB en memoire.\n\n"
                 "1) Branche le cable OTG mini-USB vers USB-A.\n"
                 "2) Appuie sur Entree: un pilote espion est installe.\n"
                 "   Il ne prend en charge aucun appareil.\n"
                 "3) Debranche puis rebranche l'antenne, attends 3 s.\n"
-                "4) Choisis \"Relire\".\n\n"
+                "4) Choisis \"Relire\" pour afficher les informations capturees.\n   Cette version ne lit pas encore les endpoints.\n\n"
                 "Le pilote reste installe jusqu'au redemarrage. Ne lance pas\n"
                 "ce programme deux fois sans redemarrer.");
     unsigned off = 0;
@@ -132,18 +132,11 @@ int main(void)
     if (!r)
         return 0;
     for (;;) {
-        /* USB Probe 4: inspecter les descripteurs deja en memoire.
-         * Aucun transfert de controle ni ecriture sur la cle USB. */
+        /* Lecture prudente des seules donnees copiees par le pilote espion.
+         * Ne jamais dereferencer E_IFH: ce pointeur peut etre invalide apres
+         * le sondage et les getters USB peuvent figer la calculatrice. */
         spy_describe(r, 1, text, sizeof text);
-        uint32_t count = r->head[0];
-        if (count) {
-            const uint32_t *e = r->ring[(count - 1U) % SPY_RING];
-            usbd_interface_handle iface = (usbd_interface_handle)(uintptr_t)e[E_IFH];
-            if (iface && !((uintptr_t)iface & 3U) &&
-                (uintptr_t)iface >= 0x10000000U && (uintptr_t)iface < 0x13c00000U) {
-                usb_interface_descriptor_t *id = usbd_get_interface_descriptor(iface);
-                if (id) {
-                    size_t n = strlen(text);
+        size_t n = strlen(text);
                     snprintf(text + n, sizeof text - n,
                         "\n\nINTERFACE %u alt=%u\nclasse=%02X sous-classe=%02X protocole=%02X",
                         id->bInterfaceNumber, id->bAlternateSetting,
