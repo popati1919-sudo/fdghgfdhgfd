@@ -7,7 +7,7 @@ GCCFLAGS = -Wall -W -marm -Os
 
 all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns
 
-src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h
+src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
 src/usb_spy.o: src/usb_spy.S
@@ -61,12 +61,12 @@ usbprobe6.tns: usbprobe6.elf
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
-# Tests sur PC (decodage). test-arm: code resident sous qemu-user ARM (optionnel).
 test:
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_decode tests/test_decode.c && ./tests/test_decode
+	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_usb_descriptors tests/test_usb_descriptors.c && ./tests/test_usb_descriptors
 
 test-arm:
 	arm-linux-gnueabihf-gcc -marm -std=gnu11 -Wall -Wextra -O1 -static -o tests/test_spy tests/test_spy.c src/usb_spy.S && qemu-arm tests/test_spy
 
 clean:
-	rm -f src/*.o *.elf *.tns *.zehn tests/test_decode tests/test_spy
+	rm -f src/*.o *.elf *.tns *.zehn tests/test_decode tests/test_usb_descriptors tests/test_spy
