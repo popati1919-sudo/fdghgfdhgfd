@@ -142,7 +142,7 @@ int main(void)
             usbd_device_handle dev = (usbd_device_handle)(uintptr_t)e[E_DEVICE];
             usbd_interface_handle iface = (usbd_interface_handle)(uintptr_t)e[E_IFH];
             if (dev && (uintptr_t)dev >= 0x10000000U && (uintptr_t)dev < 0x13c00000U) {
-                usb_device_descriptor_t *dd = usbd_get_device_descriptor(dev);
+                usb_device_descriptor_t *dd = e_usbd_get_device_descriptor(dev);
                 usb_config_descriptor_t *cd = usbd_get_config_descriptor(dev);
                 n = strlen(text);
                 if (dd) {
