@@ -142,7 +142,17 @@ int main(void)
             usbd_device_handle dev = (usbd_device_handle)(uintptr_t)e[E_DEVICE];
             usbd_interface_handle iface = (usbd_interface_handle)(uintptr_t)e[E_IFH];
             if (dev && (uintptr_t)dev >= 0x10000000U && (uintptr_t)dev < 0x13c00000U) {
-                usb_device_descriptor_t *dd = e_usbd_get_device_descriptor(dev);
+                usb_device_descriptor_t dd_storage;
+                usb_device_descriptor_t *dd = NULL;
+                usb_device_request_t req;
+                memset(&req, 0, sizeof req);
+                req.bmRequestType = UT_READ_DEVICE;
+                req.bRequest = UR_GET_DESCRIPTOR;
+                USETW(req.wValue, (UDESC_DEVICE << 8));
+                USETW(req.wIndex, 0);
+                USETW(req.wLength, sizeof dd_storage);
+                if (usbd_do_request(dev, &req, &dd_storage) == USBD_NORMAL_COMPLETION)
+                    dd = &dd_storage;
                 usb_config_descriptor_t *cd = usbd_get_config_descriptor(dev);
                 n = strlen(text);
                 if (dd) {
