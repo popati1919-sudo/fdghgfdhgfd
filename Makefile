@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -52,6 +52,11 @@ usbprobe5.tns: usbprobe5.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 5" --author "CX Internet" --notice "Capture USB unique sans relecture" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
+
+usbprobe6.tns: usbprobe6.elf
+\t$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 6" --author "CX Internet" --notice "Diagnostic VID:PID sans commande USB" --ndless-min 36
+\tmake-prg $@.zehn $@
+\trm -f $@.zehn
 
 # Tests sur PC (decodage). test-arm: code resident sous qemu-user ARM (optionnel).
 test:
