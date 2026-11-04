@@ -2,7 +2,7 @@
  * Licence GPLv3 (les registres et la methode viennent de
  * Nspire-MediaPlayer-Ndless, GPLv3). */
 #ifndef CXI_USB_SPY8_H
-#define CXI_USB_SPY_H
+#define CXI_USB_SPY8_H
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
