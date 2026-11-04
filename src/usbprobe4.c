@@ -135,7 +135,15 @@ int main(void)
         /* Lecture prudente des seules donnees copiees par le pilote espion.
          * Ne jamais dereferencer E_IFH: ce pointeur peut etre invalide apres
          * le sondage et les getters USB peuvent figer la calculatrice. */
-        spy_describe(r, 1, text, sizeof text);
+        /* Snapshot atomique du petit tampon partage avec le pilote.
+         * Les interruptions sont masquees pendant la copie afin d'eviter
+         * qu'un callback USB ne modifie l'anneau au milieu de la lecture. */
+        SpyResident snapshot;
+        unsigned mask = irq_off();
+        memcpy(snapshot.head, r->head, sizeof snapshot.head);
+        memcpy(snapshot.ring, r->ring, sizeof snapshot.ring);
+        irq_restore(mask);
+        spy_describe(&snapshot, 1, text, sizeof text);
         size_t n = strlen(text);
         snprintf(text + n, sizeof text - n, "\nport=%08lX otg=%08lX",
                  (unsigned long)rd_port(&map), (unsigned long)REG(map.otg));
