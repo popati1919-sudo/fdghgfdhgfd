@@ -52,7 +52,9 @@ static inline const char *spy_vendor_name(unsigned vid)
            vid == 0x1d6bU ? "Linux (hub)" : "inconnu";
 }
 
-/* Entree la plus recente en premier. Retourne le nombre d'entrees decrites. */
+/* Entree la plus recente en premier. Affiche aussi les mots bruts de
+ * usb_attach_arg: ils aident a diagnostiquer les champs sentinelles (FFFFFFFF).
+ * Ce rapport ne lit PAS les descripteurs USB ni les endpoints. */
 static inline unsigned spy_describe(const SpyResident *r, uint32_t ivars_off_ok,
                                     char *out, size_t cap)
 {
@@ -83,10 +85,15 @@ static inline unsigned spy_describe(const SpyResident *r, uint32_t ivars_off_ok,
         unsigned vid = e[E_VID] & 0xffffU, pid = e[E_PID] & 0xffffU;
         unsigned w = e[E_DEVWORD];
         n += (size_t)snprintf(out + n, cap - n,
-            "VID:PID %04X:%04X (%s) if=%lu cfg=%lu adr=%u vit=%s\n",
+            "VID:PID %04X:%04X (%s) if=%lu cfg=%lu adr=%u vit=%s\n"
+            "brut: port=%08lX rev=%08lX dev=%08lX iface*=%08lX%s\n",
             vid, pid, spy_vendor_name(vid),
             (unsigned long)e[E_IFACE], (unsigned long)e[E_CONF],
-            w & 0xffU, spy_speed_name((w >> 24) & 0xffU));
+            w & 0xffU, spy_speed_name((w >> 24) & 0xffU),
+            (unsigned long)e[E_PORT], (unsigned long)e[E_REL],
+            (unsigned long)e[E_DEVICE], (unsigned long)e[E_IFH],
+            (e[E_IFACE] == 0xffffffffU || e[E_CONF] == 0xffffffffU)
+                ? " [champ invalide?]" : "");
         ++shown;
     }
     return shown;
