@@ -44,3 +44,4 @@ jobs:
           path: |
             usbprobe.tns
             usbprobe1b.tns
+            usbprobe3.tns
