@@ -28,7 +28,7 @@ usbprobe4.elf: src/usbprobe4.o src/usb_spy.o
 usbprobe5.elf: src/usbprobe5.o src/usb_spy.o
 	$(LD) $^ -o $@
 
-usbprobe6.elf: src/usbprobe6.o
+usbprobe6.elf: src/usbprobe6.o src/usb_spy.o
 	$(LD) $^ -o $@
 
 usbprobe.tns: usbprobe.elf
