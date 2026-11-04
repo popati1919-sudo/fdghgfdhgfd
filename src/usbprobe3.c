@@ -132,71 +132,13 @@ int main(void)
     if (!r)
         return 0;
     for (;;) {
-        spy_describe(r, 1, text, 300);
+        /* Etape securitaire: afficher uniquement les informations deja
+         * capturees par le pilote espion. Ne pas lancer de requete USB
+         * synchrone: elle peut bloquer la TI-Nspire sur certains appareils. */
+        spy_describe(r, 1, text, sizeof text);
         size_t n = strlen(text);
         snprintf(text + n, sizeof text - n, "\nport=%08lX otg=%08lX",
                  (unsigned long)rd_port(&map), (unsigned long)REG(map.otg));
-        uint32_t count = r->head[0];
-        if (count) {
-            const uint32_t *e = r->ring[(count - 1U) % SPY_RING];
-            usbd_device_handle dev = (usbd_device_handle)(uintptr_t)e[E_DEVICE];
-            usbd_interface_handle iface = (usbd_interface_handle)(uintptr_t)e[E_IFH];
-            if (dev && (uintptr_t)dev >= 0x10000000U && (uintptr_t)dev < 0x13c00000U) {
-                usb_device_descriptor_t dd_storage;
-                usb_device_descriptor_t *dd = NULL;
-                usb_device_request_t req;
-                memset(&req, 0, sizeof req);
-                req.bmRequestType = UT_READ_DEVICE;
-                req.bRequest = UR_GET_DESCRIPTOR;
-                USETW(req.wValue, (UDESC_DEVICE << 8));
-                USETW(req.wIndex, 0);
-                USETW(req.wLength, sizeof dd_storage);
-                if (usbd_do_request(dev, &req, &dd_storage) == USBD_NORMAL_COMPLETION)
-                    dd = &dd_storage;
-                usb_config_descriptor_t *cd = usbd_get_config_descriptor(dev);
-                n = strlen(text);
-                if (dd) {
-                    snprintf(text + n, sizeof text - n,
-                        "\n\nAPPAREIL USB %x.%02x classe=%02X\nVID:PID %04X:%04X",
-                        UGETW(dd->bcdUSB) >> 8, UGETW(dd->bcdUSB) & 0xff,
-                        dd->bDeviceClass, UGETW(dd->idVendor), UGETW(dd->idProduct));
-                } else {
-                    snprintf(text + n, sizeof text - n, "\n\nDescripteur appareil indisponible.");
-                }
-                n = strlen(text);
-                if (cd) {
-                    snprintf(text + n, sizeof text - n,
-                        "\nCONFIG: interfaces=%u valeur=%u longueur=%u",
-                        cd->bNumInterface, cd->bConfigurationValue, UGETW(cd->wTotalLength));
-                } else {
-                    snprintf(text + n, sizeof text - n, "\nConfiguration indisponible.");
-                }
-                if (iface && (uintptr_t)iface >= 0x10000000U && (uintptr_t)iface < 0x13c00000U) {
-                    usb_interface_descriptor_t *id = usbd_get_interface_descriptor(iface);
-                    if (id) {
-                        n = strlen(text);
-                        snprintf(text + n, sizeof text - n,
-                            "\nIFACE %u alt=%u endpoints=%u\nclasse=%02X sous-classe=%02X protocole=%02X",
-                            id->bInterfaceNumber, id->bAlternateSetting, id->bNumEndpoints,
-                            id->bInterfaceClass, id->bInterfaceSubClass, id->bInterfaceProtocol);
-                        uint8_t epcount = 0;
-                        if (usbd_endpoint_count(iface, &epcount) == USBD_NORMAL_COMPLETION) {
-                            for (uint8_t ep = 0; ep < epcount && ep < 4; ++ep) {
-                                usb_endpoint_descriptor_t *ed = usbd_get_endpoint_descriptor(iface, ep);
-                                if (ed) {
-                                    n = strlen(text);
-                                    snprintf(text + n, sizeof text - n,
-                                        "\nEP%u %s type=%u max=%u",
-                                        UE_GET_ADDR(ed->bEndpointAddress),
-                                        UE_GET_DIR(ed->bEndpointAddress) ? "IN" : "OUT",
-                                        UE_GET_XFERTYPE(ed->bmAttributes), UGETW(ed->wMaxPacketSize));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
         if (show_msgbox_2b(TITLE, text, "Relire", "Quitter") != 1)
             break;
     }
