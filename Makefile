@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -29,6 +29,9 @@ usbprobe5.elf: src/usbprobe5.o src/usb_spy.o
 	$(LD) $^ -o $@
 
 usbprobe6.elf: src/usbprobe6.o src/usb_spy.o
+	$(LD) $^ -o $@
+
+usbprobe7.elf: src/usbprobe7.o src/usb_spy.o
 	$(LD) $^ -o $@
 
 usbprobe.tns: usbprobe.elf
@@ -58,6 +61,11 @@ usbprobe5.tns: usbprobe5.elf
 
 usbprobe6.tns: usbprobe6.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 6" --author "CX Internet" --notice "Diagnostic VID:PID sans commande USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+usbprobe7.tns: usbprobe7.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 7" --author "CX Internet" --notice "Suivi VID:PID sans commande USB" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
