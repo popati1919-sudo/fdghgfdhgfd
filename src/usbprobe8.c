@@ -114,7 +114,7 @@ static void report_valid(const SpyResident *r, char *out, size_t cap)
     size_t n = 0;
     unsigned valid = 0;
     n += (size_t)snprintf(out + n, cap - n,
-                          "Probe 8 - interfaces USB\\nSondages recus: %lu\\n",
+                          "Probe 8 - interfaces USB\nSondages recus: %lu\n",
                           (unsigned long)count);
     for (uint32_t k = 0; k < SPY_RING && k < count && n < cap - 120; ++k) {
         const uint32_t *e = r->ring[(count - 1U - k) % SPY_RING];
@@ -124,20 +124,20 @@ static void report_valid(const SpyResident *r, char *out, size_t cap)
         if (!vid || !pid || vid == 0xffffU || pid == 0xffffU) continue;
         ++valid;
         n += (size_t)snprintf(out + n, cap - n,
-            "Capture #%lu: %04X:%04X (%s)\\n"
-            "if=%lu cfg=%lu nifaces(brut)=%lu\\n"
-            "ifaces_ptr(brut)=%08lX\\n",
+            "Capture #%lu: %04X:%04X (%s)\n"
+            "if=%lu cfg=%lu nifaces(brut)=%lu\n"
+            "ifaces_ptr(brut)=%08lX\n",
             (unsigned long)(count - k), vid, pid, spy_vendor_name(vid),
             (unsigned long)e[E_IFACE], (unsigned long)e[E_CONF],
             (unsigned long)e[E_NIFACES], (unsigned long)e[E_IFACES]);
     }
     if (!valid) {
         snprintf(out + n, cap - n,
-                 "\\nAucun VID:PID complet observe. Envoie cet ecran.");
+                 "\nAucun VID:PID complet observe. Envoie cet ecran.");
         return;
     }
     snprintf(out + n, cap - n,
-             "\\nPointeur ifaces affiche seulement: jamais dereference.\\n"
+             "\nPointeur ifaces affiche seulement: jamais dereference.\n"
              "Aucune commande USB ni lecture d'endpoint.");
 }
 
