@@ -137,39 +137,6 @@ int main(void)
          * le sondage et les getters USB peuvent figer la calculatrice. */
         spy_describe(r, 1, text, sizeof text);
         size_t n = strlen(text);
-                    snprintf(text + n, sizeof text - n,
-                        "\n\nINTERFACE %u alt=%u\nclasse=%02X sous-classe=%02X protocole=%02X",
-                        id->bInterfaceNumber, id->bAlternateSetting,
-                        id->bInterfaceClass, id->bInterfaceSubClass, id->bInterfaceProtocol);
-                    uint8_t epcount = 0;
-                    if (usbd_endpoint_count(iface, &epcount) == USBD_NORMAL_COMPLETION) {
-                        for (uint8_t ep = 0; ep < epcount && ep < 6; ++ep) {
-                            usb_endpoint_descriptor_t *ed = usbd_get_endpoint_descriptor(iface, ep);
-                            if (ed) {
-                                n = strlen(text);
-                                snprintf(text + n, sizeof text - n,
-                                    "\nEP%u %s type=%u max=%u interval=%u",
-                                    UE_GET_ADDR(ed->bEndpointAddress),
-                                    UE_GET_DIR(ed->bEndpointAddress) ? "IN" : "OUT",
-                                    UE_GET_XFERTYPE(ed->bmAttributes),
-                                    UGETW(ed->wMaxPacketSize), ed->bInterval);
-                            }
-                        }
-                    } else {
-                        size_t n = strlen(text);
-                        snprintf(text + n, sizeof text - n, "\nEndpoints indisponibles.");
-                    }
-                } else {
-                    size_t n = strlen(text);
-                    snprintf(text + n, sizeof text - n, "\nDescripteur d'interface indisponible.");
-                }
-            } else {
-                size_t n = strlen(text);
-                snprintf(text + n, sizeof text - n, "\nInterface non valide (pointeur=%08lX).",
-                         (unsigned long)(uintptr_t)iface);
-            }
-        }
-        size_t n = strlen(text);
         snprintf(text + n, sizeof text - n, "\nport=%08lX otg=%08lX",
                  (unsigned long)rd_port(&map), (unsigned long)REG(map.otg));
         if (show_msgbox_2b(TITLE, text, "Relire", "Quitter") != 1)
