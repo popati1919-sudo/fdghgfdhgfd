@@ -119,7 +119,7 @@ int main(void)
                 "4) Appuie sur Entree pour afficher une seule capture.\n\n"
                 "Aucune lecture des endpoints ni des registres du controleur.\n"
                 "Le pilote reste installe jusqu'au redemarrage.\n"
-                "Ne lance pas Probe 5 deux fois sans redemarrer.");
+                "Ne lance pas Probe 6 deux fois sans redemarrer.");
     unsigned off = 0;
     SpyResident *r = install(&off);
     if (!r)
