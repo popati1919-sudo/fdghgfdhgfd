@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -22,6 +22,9 @@ usbprobe1b.elf: src/usbprobe1b.o src/usb_spy.o
 usbprobe3.elf: src/usbprobe3.o src/usb_spy.o
 	$(LD) $^ -o $@
 
+usbprobe4.elf: src/usbprobe4.o src/usb_spy.o
+	$(LD) $^ -o $@
+
 usbprobe.tns: usbprobe.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe" --author "CX Internet" --notice "Sonde USB en lecture seule" --ndless-min 36
 	make-prg $@.zehn $@
@@ -34,6 +37,11 @@ usbprobe1b.tns: usbprobe1b.elf
 
 usbprobe3.tns: usbprobe3.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 3" --author "CX Internet" --notice "Lit les descripteurs USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+usbprobe4.tns: usbprobe4.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 4" --author "CX Internet" --notice "Inspecte interfaces et endpoints en lecture seule" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
