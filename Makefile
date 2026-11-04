@@ -28,6 +28,9 @@ usbprobe4.elf: src/usbprobe4.o src/usb_spy.o
 usbprobe5.elf: src/usbprobe5.o src/usb_spy.o
 	$(LD) $^ -o $@
 
+usbprobe6.elf: src/usbprobe6.o
+	$(LD) $^ -o $@
+
 usbprobe.tns: usbprobe.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe" --author "CX Internet" --notice "Sonde USB en lecture seule" --ndless-min 36
 	make-prg $@.zehn $@
@@ -54,9 +57,9 @@ usbprobe5.tns: usbprobe5.elf
 	rm -f $@.zehn
 
 usbprobe6.tns: usbprobe6.elf
-\t$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 6" --author "CX Internet" --notice "Diagnostic VID:PID sans commande USB" --ndless-min 36
-\tmake-prg $@.zehn $@
-\trm -f $@.zehn
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 6" --author "CX Internet" --notice "Diagnostic VID:PID sans commande USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
 
 # Tests sur PC (decodage). test-arm: code resident sous qemu-user ARM (optionnel).
 test:
