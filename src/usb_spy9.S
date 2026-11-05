@@ -42,7 +42,8 @@ cxi_spy9_match:
     bne 9f
     cmp r1, #0x10000000
     blo 9f
-    cmp r1, #0x13bfffd4          /* leave 44 bytes inside checked RAM window */
+    ldr r5, =0x13bfffd4         /* load upper RAM bound from literal pool */
+    cmp r1, r5
     bhi 9f
     add r3, r7, #8
     mov r2, #11
