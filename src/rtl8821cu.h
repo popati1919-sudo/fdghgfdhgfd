@@ -1,6 +1,6 @@
-/* CX Internet - coeur initial du pilote Realtek RTL8821CU.
- * GPL-3.0-or-later. Couche pure: aucun acces materiel ni transaction USB.
- * Elle valide l'identite et les endpoints a partir d'un descripteur deja lu.
+/* CX Internet - coeur de selection d'interface RTL8821CU.
+ * GPL-3.0-or-later. Couche pure: aucune transaction USB ni acces radio.
+ * Les donnees viennent d'un descripteur USB deja obtenu par une couche hote.
  */
 #ifndef CXI_RTL8821CU_H
 #define CXI_RTL8821CU_H
@@ -10,6 +10,7 @@
 
 #define CXI_RTL_VID 0x0bdaU
 #define CXI_RTL8821CU_PID 0xc820U
+#define CXI_RTL_MAX_BULK_OUT 4U
 
 typedef enum {
     CXI_RTL_NOT_MATCHED = 0,
@@ -22,22 +23,24 @@ typedef enum {
 typedef struct {
     uint8_t interface_number;
     uint8_t bulk_in;
-    uint8_t bulk_out;
+    uint8_t bulk_out[CXI_RTL_MAX_BULK_OUT];
+    uint8_t bulk_out_count;
     uint8_t interrupt_in;
     uint16_t bulk_in_max_packet;
-    uint16_t bulk_out_max_packet;
+    uint16_t bulk_out_max_packet[CXI_RTL_MAX_BULK_OUT];
+    uint16_t interrupt_max_packet;
 } CxiRtlInterface;
 
-/* Le PID 1A2B observe sur la CX n'est PAS accepte comme RTL8821CU operationnel:
- * il peut correspondre au mode initial/chargeur. On attend le PID C820 confirme
- * sur Windows avant d'associer le pilote radio. */
+/* 0BDA:1A2B n'est pas accepte: seule l'identite finale 0BDA:C820
+ * est associee au RTL8821CU. Le mode 1A2B doit etre traite separement. */
 static inline int cxi_rtl8821cu_id_matches(uint16_t vid, uint16_t pid)
 {
     return vid == CXI_RTL_VID && pid == CXI_RTL8821CU_PID;
 }
 
-/* Inspection sans I/O: exige une interface vendor-specific et les deux
- * canaux bulk IN/OUT. Le numero d'interface est retourne, jamais devine. */
+/* Selectionne l'interface vendor-specific avec Bulk IN, au moins un Bulk
+ * OUT, et memorise aussi tous les Bulk OUT et Interrupt IN disponibles.
+ * Aucun endpoint n'est contacte ici. */
 static inline CxiRtlResult cxi_rtl8821cu_select_interface(
     uint16_t vid, uint16_t pid, const CxiUsbConfiguration *cfg,
     CxiRtlInterface *selected)
@@ -51,27 +54,34 @@ static inline CxiRtlResult cxi_rtl8821cu_select_interface(
 
     for (i = 0; i < cfg->interface_count; ++i) {
         const CxiUsbInterface *it = &cfg->interfaces[i];
-        CxiRtlInterface candidate = {0, 0, 0, 0, 0, 0};
+        CxiRtlInterface c = {0};
         if (it->klass != 0xffU) continue;
         saw_vendor = 1;
-        candidate.interface_number = it->number;
+        c.interface_number = it->number;
         for (j = 0; j < cfg->endpoint_count; ++j) {
             const CxiUsbEndpoint *ep = &cfg->endpoints[j];
             unsigned transfer = ep->attributes & 3U;
-            if (ep->interface_number != it->number || transfer != 2U ||
-                ep->max_packet == 0U) continue;
-            if ((ep->address & 0x80U) != 0U) {
-                if (!candidate.bulk_in) {
-                    candidate.bulk_in = ep->address;
-                    candidate.bulk_in_max_packet = ep->max_packet;
+            if (ep->interface_number != it->number || !ep->max_packet)
+                continue;
+            if (transfer == 2U && (ep->address & 0x80U)) {
+                if (!c.bulk_in) {
+                    c.bulk_in = ep->address;
+                    c.bulk_in_max_packet = ep->max_packet & 0x07ffU;
                 }
-            } else if (!candidate.bulk_out) {
-                candidate.bulk_out = ep->address;
-                candidate.bulk_out_max_packet = ep->max_packet;
+            } else if (transfer == 2U && !(ep->address & 0x80U)) {
+                if (c.bulk_out_count < CXI_RTL_MAX_BULK_OUT) {
+                    unsigned k = c.bulk_out_count++;
+                    c.bulk_out[k] = ep->address;
+                    c.bulk_out_max_packet[k] = ep->max_packet & 0x07ffU;
+                }
+            } else if (transfer == 3U && (ep->address & 0x80U) &&
+                       !c.interrupt_in) {
+                c.interrupt_in = ep->address;
+                c.interrupt_max_packet = ep->max_packet & 0x07ffU;
             }
         }
-        if (candidate.bulk_in && candidate.bulk_out) {
-            *selected = candidate;
+        if (c.bulk_in && c.bulk_out_count) {
+            *selected = c;
             return CXI_RTL_INTERFACE_FOUND;
         }
     }
