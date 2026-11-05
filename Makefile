@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -14,6 +14,12 @@ src/usb_spy.o: src/usb_spy.S
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
 src/usbprobe8.o: src/usbprobe8.c src/usb_spy8.h src/usbprobe_decode.h
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+src/usbprobe9.o: src/usbprobe9.c src/usb_spy8.h src/usbprobe_decode.h
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+src/usb_spy9.o: src/usb_spy9.S
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
 src/usb_spy8.o: src/usb_spy8.S
@@ -41,6 +47,9 @@ usbprobe7.elf: src/usbprobe7.o src/usb_spy.o
 	$(LD) $^ -o $@
 
 usbprobe8.elf: src/usbprobe8.o src/usb_spy8.o
+	$(LD) $^ -o $@
+
+usbprobe9.elf: src/usbprobe9.o src/usb_spy9.o
 	$(LD) $^ -o $@
 
 usbprobe.tns: usbprobe.elf
@@ -80,6 +89,11 @@ usbprobe7.tns: usbprobe7.elf
 
 usbprobe8.tns: usbprobe8.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 8" --author "CX Internet" --notice "Nombre d interfaces USB sans dereferencement" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+usbprobe9.tns: usbprobe9.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 9" --author "CX Internet" --notice "Snapshot USB borne sans pointeur imbrique" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
