@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 #define TITLE "CX Internet - USB Probe 11"
-static const char *yn(int v) { return v ? "DISPONIBLE" : "ABSENTE"; }
+static const char *status_text(int v) { return v ? "DISPONIBLE" : "ABSENTE"; }
 
 int main(void)
 {
@@ -50,9 +50,9 @@ int main(void)
         "- aucun pointeur suivi\n- aucun descripteur demande\n"
         "- aucun transfert / firmware / scan Wi-Fi\n\n"
         "Presence syscall != fonction testee ou sure.",
-        yn(s_register), yn(s_ivars), yn(s_softc), yn(s_idesc),
-        yn(s_epdesc), yn(s_epcount), yn(s_openpipe), yn(s_openintr),
-        yn(s_request), (unsigned)sizeof(struct usb_attach_arg),
+        status_text(s_register), status_text(s_ivars), status_text(s_softc), status_text(s_idesc),
+        status_text(s_epdesc), status_text(s_epcount), status_text(s_openpipe), status_text(s_openintr),
+        status_text(s_request), (unsigned)sizeof(struct usb_attach_arg),
         (unsigned)offsetof(struct usb_attach_arg, port),
         (unsigned)offsetof(struct usb_attach_arg, configno),
         (unsigned)offsetof(struct usb_attach_arg, ifaceno),
