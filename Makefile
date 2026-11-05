@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns
+all: usbwifi-installer.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -107,3 +107,14 @@ test-arm:
 
 clean:
 	rm -f src/*.o *.elf *.tns *.zehn tests/test_decode tests/test_usb_descriptors tests/test_rtl8821cu tests/test_spy
+
+src/usbwifi_installer.o: src/usbwifi_installer.c
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+usbwifi-installer.elf: src/usbwifi_installer.o
+	$(LD) $^ -o $@
+
+usbwifi-installer.tns: usbwifi-installer.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet Wi-Fi Installer" --author "CX Internet" --notice "Installateur preparatoire RTL8821CU" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
