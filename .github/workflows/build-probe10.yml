@@ -1,4 +1,4 @@
-name: Build USB Probe 12
+name: Build USB Probe 13
 on:
   workflow_dispatch:
   push:
@@ -38,13 +38,13 @@ jobs:
           make build-tools
       - name: Host tests
         run: make test
-      - name: Build Probe 12
-        run: make usbprobe12.tns
+      - name: Build Probe 13
+        run: make usbprobe13.tns
       - name: Verify output
-        run: test -s usbprobe12.tns
+        run: test -s usbprobe13.tns
       - name: Upload latest USB probe
         uses: actions/upload-artifact@v4
         with:
           name: usbprobes
-          path: usbprobe12.tns
+          path: usbprobe13.tns
           if-no-files-found: error
