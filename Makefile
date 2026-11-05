@@ -4,16 +4,16 @@ LD  = nspire-ld
 GENZEHN = genzehn
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe10.tns
+all: usbprobe11.tns
 
-src/usbprobe10_safe.o: src/usbprobe10_safe.c
+src/usbprobe11_abi.o: src/usbprobe11_abi.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
-usbprobe10_safe.elf: src/usbprobe10_safe.o
+usbprobe11_abi.elf: src/usbprobe11_abi.o
 	$(LD) $^ -o $@
 
-usbprobe10.tns: usbprobe10_safe.elf
-	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 10" --author "CX Internet" --notice "Inventaire passif API USB Ndless, sans transfert" --ndless-min 36
+usbprobe11.tns: usbprobe11_abi.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 11" --author "CX Internet" --notice "Audit ABI USB passif, sans action materielle" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
