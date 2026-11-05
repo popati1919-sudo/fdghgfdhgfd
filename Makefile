@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -101,9 +101,21 @@ test:
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_decode tests/test_decode.c && ./tests/test_decode
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_usb_descriptors tests/test_usb_descriptors.c && ./tests/test_usb_descriptors
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu tests/test_rtl8821cu.c && ./tests/test_rtl8821cu
+	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_scsi_eject tests/test_scsi_eject.c && ./tests/test_scsi_eject
+
+src/usbprobe15.o: src/usbprobe15.c src/scsi_eject.h
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+usbprobe15.elf: src/usbprobe15.o
+	$(LD) $^ -o $@
+
+usbprobe15.tns: usbprobe15.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 15" --author "CX Internet" --notice "Validation SCSI BOT sans transfert USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
 
 test-arm:
 	arm-linux-gnueabihf-gcc -marm -std=gnu11 -Wall -Wextra -O1 -static -o tests/test_spy tests/test_spy.c src/usb_spy.S && qemu-arm tests/test_spy
 
 clean:
-	rm -f src/*.o *.elf *.tns *.zehn tests/test_decode tests/test_usb_descriptors tests/test_rtl8821cu tests/test_spy
+	rm -f src/*.o *.elf *.tns *.zehn tests/test_decode tests/test_usb_descriptors tests/test_rtl8821cu tests/test_scsi_eject tests/test_spy
