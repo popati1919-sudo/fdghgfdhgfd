@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -102,6 +102,7 @@ test:
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_usb_descriptors tests/test_usb_descriptors.c && ./tests/test_usb_descriptors
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu tests/test_rtl8821cu.c && ./tests/test_rtl8821cu
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_scsi_eject tests/test_scsi_eject.c && ./tests/test_scsi_eject
+	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_usb_bot_gate tests/test_usb_bot_gate.c && ./tests/test_usb_bot_gate
 
 src/usbprobe15.o: src/usbprobe15.c src/scsi_eject.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -119,3 +120,14 @@ test-arm:
 
 clean:
 	rm -f src/*.o *.elf *.tns *.zehn tests/test_decode tests/test_usb_descriptors tests/test_rtl8821cu tests/test_scsi_eject tests/test_spy
+
+src/usbprobe16.o: src/usbprobe16.c src/usb_bot_gate.h
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+usbprobe16.elf: src/usbprobe16.o
+	$(LD) $^ -o $@
+
+usbprobe16.tns: usbprobe16.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 16" --author "CX Internet" --notice "Garde compatibilite BOT sans transfert USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
