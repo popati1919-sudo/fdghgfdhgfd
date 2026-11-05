@@ -42,5 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: usbprobes
-          path: usbprobe9.tns
+          path: usbwifi-installer.tns
           if-no-files-found: error
