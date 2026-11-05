@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbwifi-installer.tns
+all: usbprobe9.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -16,8 +16,16 @@ src/usb_spy.o: src/usb_spy.S
 src/usbprobe8.o: src/usbprobe8.c src/usb_spy8.h src/usbprobe_decode.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
-src/usbprobe9.o: src/usbprobe9.c src/usb_spy8.h src/usbprobe_decode.h
+src/usbprobe9_safe.o: src/usbprobe9_safe.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+usbprobe9_safe.elf: src/usbprobe9_safe.o
+	$(LD) $^ -o $@
+
+usbprobe9.tns: usbprobe9_safe.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 9" --author "CX Internet" --notice "Reference endpoints RTL8821CU sans transfert USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
 
 src/usb_spy9.o: src/usb_spy9.S
 	$(GCC) $(GCCFLAGS) -c $< -o $@
