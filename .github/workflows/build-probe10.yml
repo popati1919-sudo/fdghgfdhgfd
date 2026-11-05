@@ -1,4 +1,4 @@
-name: Build USB Probe 10
+name: Build USB Probe 11 (dedicated)
 on:
   workflow_dispatch:
   push:
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch Ndless
+      - name: Fetch Ndless SDK
         run: git clone --branch master --recurse-submodules https://github.com/ndless-nspire/Ndless.git external/Ndless
       - name: Host dependencies
         run: |
@@ -25,7 +25,7 @@ jobs:
         if: steps.tc.outputs.cache-hit != 'true'
         working-directory: external/Ndless/ndless-sdk/toolchain
         run: PARALLEL="-j$(nproc)" ./build_toolchain.sh
-      - name: PATH
+      - name: Add SDK tools to PATH
         run: |
           echo "$GITHUB_WORKSPACE/external/Ndless/ndless-sdk/toolchain/install/bin" >> "$GITHUB_PATH"
           echo "$GITHUB_WORKSPACE/external/Ndless/ndless-sdk/bin" >> "$GITHUB_PATH"
@@ -36,13 +36,15 @@ jobs:
           make build-libndls
           make build-thirdparty
           make build-tools
-      - name: Build Probe 10
-        run: make usbprobe10.tns
+      - name: Host tests
+        run: make test
+      - name: Build Probe 11
+        run: make usbprobe11.tns
       - name: Verify output
-        run: test -s usbprobe10.tns
-      - name: Upload Probe 10
+        run: test -s usbprobe11.tns
+      - name: Upload latest USB probe
         uses: actions/upload-artifact@v4
         with:
           name: usbprobes
-          path: usbprobe10.tns
+          path: usbprobe11.tns
           if-no-files-found: error
