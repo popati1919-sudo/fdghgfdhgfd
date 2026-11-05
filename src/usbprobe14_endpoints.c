@@ -83,7 +83,7 @@ int main(void)
             "ATTENTION: extrait statique Windows.\n"
             "Aucun descripteur lu sur la calculatrice.\n"
             "Aucun pilote enregistre, aucun transfert, aucun scan.",
-            selected.bulk_in, selected.bulk_out);
+            selected.bulk_in, selected.bulk_out[0]);
     }
 
     show_msgbox(TITLE, report);
