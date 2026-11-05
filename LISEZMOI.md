@@ -103,3 +103,31 @@ aucun registre USB.
 
 Rappel: connaitre le VID:PID ne rend pas le Wi-Fi possible (pas de pilote RTL8821CU,
 WPA2, TCP/IP ni TLS sur la CX). Le VID:PID s'obtient aussi en 10 secondes sur un PC.
+
+
+---
+
+# Debut du pilote RTL8821CU (coeur hors-ligne)
+
+Le premier module de pilote est dans `src/rtl8821cu.h`. Il ne fait volontairement
+aucune transaction USB pour l'instant. Il fournit deux briques verifiables:
+- reconnaissance stricte de l'identifiant Realtek `0BDA:C820`;
+- selection d'une interface vendor-specific qui expose des endpoints bulk IN
+  et bulk OUT valides a partir d'un descripteur de configuration deja lu.
+
+Le PID `0BDA:1A2B` observe sur la TI-Nspire n'est pas assimile a tort au
+peripherique radio actif. Il peut correspondre au mode initial/chargeur; il faut
+d'abord obtenir les descripteurs reels et confirmer le changement d'identifiant.
+
+Tests PC:
+```sh
+make test
+```
+
+**Etat actuel: coeur de validation seulement, pas encore un pilote Wi-Fi utilisable.**
+La prochaine etape est de confirmer l'API d'enumeration/transactions USB de
+Ndless et la disposition reelle des structures de l'OS 4.2.0.532. Tant que ces
+deux points ne sont pas prouves, le code n'enregistre pas de pilote materiel,
+n'envoie pas de requete USB et ne touche pas aux endpoints. Ensuite seulement
+viendront l'initialisation du RTL8821CU, son firmware, le scan radio, puis la
+securite Wi-Fi et la pile IP.
