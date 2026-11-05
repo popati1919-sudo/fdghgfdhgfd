@@ -38,15 +38,9 @@ jobs:
         run: make test
       - name: Build probes
         run: make
-      - uses: actions/upload-artifact@v4
+      - name: Upload latest USB probe only
+        uses: actions/upload-artifact@v4
         with:
           name: usbprobes
-          path: |
-            usbprobe.tns
-            usbprobe1b.tns
-            usbprobe3.tns
-            usbprobe4.tns
-            usbprobe5.tns
-            usbprobe6.tns
-            usbprobe7.tns
-            usbprobe8.tns
+          path: usbprobe8.tns
+          if-no-files-found: error
