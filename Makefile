@@ -4,7 +4,7 @@ LD  = nspire-ld
 GENZEHN = genzehn
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe12.tns
+all: usbprobe13.tns
 
 src/usbprobe11_abi.o: src/usbprobe11_abi.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -17,6 +17,17 @@ usbprobe12_abi.elf: src/usbprobe12_abi.o
 
 usbprobe12.tns: usbprobe12_abi.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 12" --author "CX Internet" --notice "Validation ABI USB compile-time uniquement" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+src/usbprobe13_match.o: src/usbprobe13_match.c
+	$(GCC) $(GCCFLAGS) -std=gnu99 -c $< -o $@
+
+usbprobe13_match.elf: src/usbprobe13_match.o
+	$(LD) $^ -o $@
+
+usbprobe13.tns: usbprobe13_match.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 13" --author "CX Internet" --notice "Test logiciel match RTL8821CU sans acces USB" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
