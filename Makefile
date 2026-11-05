@@ -4,16 +4,19 @@ LD  = nspire-ld
 GENZEHN = genzehn
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe11.tns
+all: usbprobe12.tns
 
 src/usbprobe11_abi.o: src/usbprobe11_abi.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
-usbprobe11_abi.elf: src/usbprobe11_abi.o
+src/usbprobe12_abi.o: src/usbprobe12_abi.c
+	$(GCC) $(GCCFLAGS) -std=gnu99 -c $< -o $@
+
+usbprobe12_abi.elf: src/usbprobe12_abi.o
 	$(LD) $^ -o $@
 
-usbprobe11.tns: usbprobe11_abi.elf
-	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 11" --author "CX Internet" --notice "Audit ABI USB passif, sans action materielle" --ndless-min 36
+usbprobe12.tns: usbprobe12_abi.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 12" --author "CX Internet" --notice "Validation ABI USB compile-time uniquement" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
