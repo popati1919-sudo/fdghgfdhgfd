@@ -100,10 +100,7 @@ usbprobe8.tns: usbprobe8.elf
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
-usbprobe9.tns: usbprobe9.elf
-	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 9" --author "CX Internet" --notice "Snapshot USB borne sans pointeur imbrique" --ndless-min 36
-	make-prg $@.zehn $@
-	rm -f $@.zehn
+# Legacy Probe 9 target removed: usbprobe9.tns is built only from usbprobe9_safe.elf.
 
 test:
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_decode tests/test_decode.c && ./tests/test_decode
