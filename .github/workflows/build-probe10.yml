@@ -1,4 +1,4 @@
-name: Build USB Probe 11 (dedicated)
+name: Build USB Probe 11
 on:
   workflow_dispatch:
   push:
