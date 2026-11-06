@@ -29,8 +29,6 @@ static volatile int g_detach_calls;
 static volatile int g_last_pid = -1;
 static volatile int g_last_if = -1;
 static volatile int g_last_conf = -1;
-static volatile int g_last_nifaces = -1;
-static volatile unsigned int g_ifaces_ptr;
 static volatile int g_last_port = -1;
 static volatile int g_cd_seen;
 static volatile int g_wifi_seen;
@@ -45,8 +43,6 @@ static void record_uaa(struct usb_attach_arg *uaa)
     g_last_pid = uaa->product;
     g_last_if = uaa->ifaceno;
     g_last_conf = uaa->configno;
-    g_last_nifaces = uaa->nifaces;
-    g_ifaces_ptr = (unsigned int)(uintptr_t)uaa->ifaces;
     g_last_port = uaa->port;
     if (uaa->product == RTL_PID_CDROM) g_cd_seen = 1;
     if (uaa->product == RTL_PID_WIFI) g_wifi_seen = 1;
@@ -98,41 +94,38 @@ static void show_report(int registration)
 {
     char report[1000];
     snprintf(report, sizeof(report),
-        "RTL8821CU - USB DIAGNOSTIC 0.5\\n"
-        "------------------------------\\n"
-        "Enregistrement Ndless : %s (%d)\\n"
-        "Callbacks match/attach/detach : %d/%d/%d\\n"
-        "usb_attach_arg NULL : %d\\n\\n"
-        "Dernier PID : %04X\\n"
-        "Port / config / interface : %d / %d / %d\\n"
-        "nifaces : %d\\n"
-        "ifaces pointer (brut) : %08X\\n\\n"
-        "Mode CD 0BDA:1A2B : %s\\n"
-        "Mode Wi-Fi 0BDA:C820 : %s\\n\\n"
-        "Aucun pointeur ifaces n'est dereference.\\n"
-        "Aucun endpoint, SCSI, BOT ou firmware n'est touche.\\n"
+        "RTL8821CU - USB DIAGNOSTIC 0.6\n"
+        "------------------------------\n"
+        "Enregistrement Ndless : %s (%d)\n"
+        "Callbacks match/attach/detach : %d/%d/%d\n"
+        "usb_attach_arg NULL : %d\n\n"
+        "Dernier PID : %04X\n"
+        "Port / config / interface : %d / %d / %d\n\n"
+        "Mode CD 0BDA:1A2B : %s\n"
+        "Mode Wi-Fi 0BDA:C820 : %s\n\n"
+        "Champs nifaces/ifaces masques : ABI non validee.\n"
+        "Aucun endpoint, SCSI, BOT ou firmware n'est touche.\n"
         "Branche/debranche l'antenne puis actualise.",
         registration == 0 ? "OK" : "ECHEC", registration,
         (int)g_match_calls, (int)g_attach_calls, (int)g_detach_calls,
         (int)g_null_uaa, (unsigned)(g_last_pid < 0 ? 0 : g_last_pid),
         (int)g_last_port, (int)g_last_conf, (int)g_last_if,
-        (int)g_last_nifaces, g_ifaces_ptr,
         g_cd_seen ? "OBSERVE" : "pas observe",
         g_wifi_seen ? "OBSERVE" : "pas observe");
-    show_msgbox("RTL8821CU USB Diagnostic 0.5", report);
+    show_msgbox("RTL8821CU USB Diagnostic 0.6", report);
 }
 
 int main(void)
 {
     int registration, choice;
     registration = usb_register_driver(
-        2, rtl_mode_methods, "rtl8821cu-usbdiag05", 0,
+        2, rtl_mode_methods, "rtl8821cu-usbdiag06", 0,
         (unsigned int)sizeof(rtl_diag_sc_t));
     nl_set_resident();
 
     for (;;) {
         show_report(registration);
-        choice = show_msgbox_2b("RTL8821CU - USB DIAGNOSTIC 0.5",
+        choice = show_msgbox_2b("RTL8821CU - USB DIAGNOSTIC 0.6",
             "Actualiser apres avoir branche/debranche l'antenne ?",
             "Actualiser", "Quitter");
         if (choice != 1) _exit(0);
