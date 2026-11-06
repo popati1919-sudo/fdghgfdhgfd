@@ -41,6 +41,8 @@ static volatile int g_eject_attempted;
 static volatile int g_eject_result;
 static volatile int g_wifi_match;
 static volatile int g_wifi_attached;
+static volatile uint8_t g_bulk_in;
+static volatile uint8_t g_bulk_out;
 
 static int rtl_mode_match(device_t self)
 {
@@ -135,6 +137,8 @@ static int rtl_send_scsi_eject(struct usb_attach_arg *uaa,
 
     sc->bulk_in = ep_in;
     sc->bulk_out = ep_out;
+    g_bulk_in = ep_in;
+    g_bulk_out = ep_out;
 
     status = usbd_open_pipe(uaa->iface, ep_out, 0, &pipe_out);
     if (status != USBD_NORMAL_COMPLETION)
@@ -177,6 +181,11 @@ static int rtl_send_scsi_eject(struct usb_attach_arg *uaa,
         csw[6] != (uint8_t)(BOT_TAG >> 16) ||
         csw[7] != (uint8_t)(BOT_TAG >> 24)) {
         result = -100;
+        goto cleanup;
+    }
+
+    if (csw[8] != 0 || csw[9] != 0 || csw[10] != 0 || csw[11] != 0) {
+        result = -103;
         goto cleanup;
     }
 
@@ -286,7 +295,7 @@ static void show_report(int registration)
         g_cd_match ? "interface stockage detectee" : "pas detecte",
         eject_text(g_eject_result),
         g_eject_result,
-        0, 0,
+        (unsigned)g_bulk_in, (unsigned)g_bulk_out,
         g_wifi_attached ? "INTERFACE ATTACHEE" :
         (g_wifi_match ? "interface detectee, attach en attente" :
                         "pas encore detecte"));
