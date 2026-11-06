@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns rtl8821cu_core.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -154,5 +154,16 @@ usbprobe18.elf: src/usbprobe18.o
 
 usbprobe18.tns: usbprobe18.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 18" --author "CX Internet" --notice "Audit firmware et protocole RTL8821C hors-ligne" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+src/rtl8821cu_core_app.o: src/rtl8821cu_core_app.c src/rtl8821cu_core.h
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+rtl8821cu_core.elf: src/rtl8821cu_core_app.o
+	$(LD) $^ -o $@
+
+rtl8821cu_core.tns: rtl8821cu_core.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "RTL8821CU Driver Core" --author "CX Internet" --notice "Noyau pilote hors ligne, sans E/S USB" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
