@@ -5,7 +5,7 @@
 int main(void) {
     /* Minimal synthetic configuration with MI_02 and three bulk endpoints. */
     const uint8_t cfg[] = {
-      9,2, 48,0, 1,1,0,0x80,50,
+      9,2, 39,0, 1,1,0,0x80,50,
       9,4, 2,0,3,0xff,0xff,0xff,0,
       7,5,0x84,2,0,2,0,
       7,5,0x05,2,0,2,0,
