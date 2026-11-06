@@ -38,9 +38,9 @@ jobs:
         run: make test
       - name: Build probes
         run: make
-      - name: Upload RTL8821CU Wi-Fi interface 0.5
+      - name: Upload RTL8821CU attach probe 0.1
         uses: actions/upload-artifact@v4
         with:
           name: usbprobes
-          path: rtl8821cu_wifi05.tns
+          path: rtl8821cu_attach19.tns
           if-no-files-found: error
