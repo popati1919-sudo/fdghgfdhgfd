@@ -105,6 +105,7 @@ test:
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_usb_bot_gate tests/test_usb_bot_gate.c && ./tests/test_usb_bot_gate
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu_audit tests/test_rtl8821cu_audit.c && ./tests/test_rtl8821cu_audit
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu_protocol tests/test_rtl8821cu_protocol.c && ./tests/test_rtl8821cu_protocol
+	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu_core tests/test_rtl8821cu_core.c && ./tests/test_rtl8821cu_core
 
 src/usbprobe15.o: src/usbprobe15.c src/scsi_eject.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
