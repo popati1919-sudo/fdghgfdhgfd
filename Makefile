@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: rtl8821cu_core.tns usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns rtl8821cu_core.tns rtl8821cu_core04.tns rtl8821cu_wifi05.tns
+all: rtl8821cu_core.tns usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns rtl8821cu_core.tns rtl8821cu_core04.tns rtl8821cu_wifi05.tns rtl8821cu_attach19.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -187,5 +187,16 @@ rtl8821cu_wifi05.elf: src/rtl8821cu_wifi05_app.o
 
 rtl8821cu_wifi05.tns: rtl8821cu_wifi05.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "RTL8821CU Wi-Fi 0.5" --author "CX Internet" --notice "Interface interactive; scan bloque jusqu'au pilote USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+src/rtl8821cu_attach_app.o: src/rtl8821cu_attach_app.c
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+rtl8821cu_attach19.elf: src/rtl8821cu_attach_app.o
+	$(LD) $^ -o $@
+
+rtl8821cu_attach19.tns: rtl8821cu_attach19.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "RTL8821CU Attach Probe 0.1" --author "CX Internet" --notice "Attachement USB interface en lecture seule" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
