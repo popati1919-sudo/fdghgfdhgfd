@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns
+all: usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -104,6 +104,7 @@ test:
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_scsi_eject tests/test_scsi_eject.c && ./tests/test_scsi_eject
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_usb_bot_gate tests/test_usb_bot_gate.c && ./tests/test_usb_bot_gate
 	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu_audit tests/test_rtl8821cu_audit.c && ./tests/test_rtl8821cu_audit
+	gcc -std=c99 -Wall -Wextra -Wpedantic -o tests/test_rtl8821cu_protocol tests/test_rtl8821cu_protocol.c && ./tests/test_rtl8821cu_protocol
 
 src/usbprobe15.o: src/usbprobe15.c src/scsi_eject.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -141,5 +142,16 @@ usbprobe17.elf: src/usbprobe17.o
 
 usbprobe17.tns: usbprobe17.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 17" --author "CX Internet" --notice "Audit RTL8821CU sans transfert USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+src/usbprobe18.o: src/usbprobe18.c src/rtl8821cu_protocol.h
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+usbprobe18.elf: src/usbprobe18.o
+	$(LD) $^ -o $@
+
+usbprobe18.tns: usbprobe18.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "CX Internet USB Probe 18" --author "CX Internet" --notice "Audit firmware et protocole RTL8821C hors-ligne" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
