@@ -44,3 +44,10 @@ jobs:
           name: rtl8821cu-usbdiag-06
           path: rtl8821cu_usbdiag06.tns
           if-no-files-found: error
+
+      - name: Upload RTL8821CU USB diagnostic 0.7
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl8821cu-usbdiag-07
+          path: rtl8821cu_usbdiag07.tns
+          if-no-files-found: error
