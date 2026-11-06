@@ -38,9 +38,9 @@ jobs:
         run: make test
       - name: Build probes
         run: make
-      - name: Upload RTL8821CU mode switch 0.1
+      - name: Upload RTL8821CU mode switch 0.2
         uses: actions/upload-artifact@v4
         with:
-          name: rtl8821cu-mode-switch
-          path: rtl8821cu_modeswitch20.tns
+          name: rtl8821cu-mode-switch-02
+          path: rtl8821cu_modeswitch21.tns
           if-no-files-found: error
