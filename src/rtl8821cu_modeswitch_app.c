@@ -75,12 +75,17 @@ static int rtl_mode_match(device_t self)
     g_last_pid = uaa->product;
     g_last_if = uaa->ifaceno;
 
-    if (uaa->iface == NULL)
-        return UMATCH_VENDOR_PRODUCT;
+    /* A whole-device match has ifaceno == -1 and iface == NULL.
+     * Returning UMATCH_VENDOR_PRODUCT (13) here binds the driver to the
+     * device itself, which is exactly why attach() saw no interface.
+     * Require a real interface and return the interface-specific match
+     * code (8), so the USB framework invokes us per interface. */
+    if (uaa->iface == NULL || uaa->ifaceno < 0)
+        return UMATCH_NONE;
 
     id = usbd_get_interface_descriptor(uaa->iface);
     if (id == NULL)
-        return UMATCH_VENDOR_PRODUCT;
+        return UMATCH_NONE;
 
     ++g_realtek_interfaces;
     g_last_class = id->bInterfaceClass;
@@ -92,7 +97,7 @@ static int rtl_mode_match(device_t self)
     if (uaa->product == RTL_PID_WIFI)
         g_wifi_match = 1;
 
-    return UMATCH_VENDOR_PRODUCT;
+    return UMATCH_VENDOR_PRODUCT_CONF_IFACE;
 }
 
 static usbd_status rtl_bulk_once(usbd_device_handle dev,
@@ -287,7 +292,7 @@ static void show_report(int registration)
 {
     char report[1100];
     snprintf(report, sizeof(report),
-        "RTL8821CU - MODE SWITCH 0.3\n"
+        "RTL8821CU - MODE SWITCH 0.4\n"
         "------------------------------\n"
         "Enregistrement Ndless : %s (%d)\n"
         "Callbacks match / attach : %d / %d\n"
@@ -317,14 +322,14 @@ static void show_report(int registration)
         eject_text(g_eject_result), (int)g_eject_result,
         g_wifi_attached ? "INTERFACE ATTACHEE" :
         (g_wifi_match ? "PID detecte" : "pas detecte"));
-    show_msgbox("RTL8821CU Mode Switch 0.3", report);
+    show_msgbox("RTL8821CU Mode Switch 0.4", report);
 }
 
 int main(void)
 {
     int registration, choice;
     registration = usb_register_driver(
-        2, rtl_mode_methods, "rtl8821cu-modeswitch03", 0,
+        2, rtl_mode_methods, "rtl8821cu-modeswitch04", 0,
         (unsigned int)sizeof(rtl_mode_sc_t));
     nl_set_resident();
 
