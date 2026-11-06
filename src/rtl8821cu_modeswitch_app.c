@@ -8,11 +8,13 @@
  */
 #include <os.h>
 #include <libndls.h>
+#include <nucleus.h>
 #include <usbdi.h>
 #include <usb.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "scsi_eject.h"
 
@@ -307,9 +309,6 @@ int main(void)
     int registration;
     int choice;
 
-    nl_relocdata((unsigned *)rtl_mode_methods,
-        sizeof(rtl_mode_methods) / sizeof(rtl_mode_methods[0]) - 1);
-
     registration = usb_register_driver(
         2, rtl_mode_methods, "rtl8821cu-modeswitch", 0,
         (unsigned int)sizeof(rtl_mode_sc_t));
@@ -323,7 +322,7 @@ int main(void)
             "Actualiser l'etat du changement de mode ?",
             "Actualiser", "Quitter");
         if (choice != 1)
-            break;
+            _exit(0);
     }
-    return 0;
+    _exit(0);
 }
