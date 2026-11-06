@@ -5,9 +5,11 @@
  */
 #include <os.h>
 #include <libndls.h>
+#include <nucleus.h>
 #include <usbdi.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define RTL_VID 0x0bda
 #define RTL_PID 0xc820
@@ -130,11 +132,6 @@ int main(void)
     int registration;
     int choice;
 
-    /* Required by the original Ndless HIDn driver pattern. Without this,
-     * callback pointers in the resident USB driver table are not relocated. */
-    nl_relocdata((unsigned *)rtl8821cu_methods,
-        sizeof(rtl8821cu_methods) / sizeof(rtl8821cu_methods[0]) - 1);
-
     registration = usb_register_driver(
         2, rtl8821cu_methods, "rtl8821cu", 0,
         (unsigned int)sizeof(rtl8821cu_softc_t));
@@ -148,7 +145,7 @@ int main(void)
             "Actualiser l'etat de l'attachement USB ?",
             "Actualiser", "Quitter");
         if (choice != 1)
-            break;
+            _exit(0);
     }
-    return 0;
+    _exit(0);
 }
