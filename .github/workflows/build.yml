@@ -38,9 +38,9 @@ jobs:
         run: make test
       - name: Build probes
         run: make
-      - name: Upload RTL8821CU USB diagnostic 0.5
+      - name: Upload RTL8821CU USB diagnostic 0.6
         uses: actions/upload-artifact@v4
         with:
-          name: rtl8821cu-usbdiag-05
-          path: rtl8821cu_usbdiag05.tns
+          name: rtl8821cu-usbdiag-06
+          path: rtl8821cu_usbdiag06.tns
           if-no-files-found: error
