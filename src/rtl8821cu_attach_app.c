@@ -92,8 +92,8 @@ static int rtl8821cu_detach(device_t self)
     return 0;
 }
 
-/* This four-entry NULL-terminated callback table follows the Ndless HIDn
- * usbdi examples: match, attach, detach, NULL. */
+/* Ndless HIDn uses this exact callback order. The table must be relocated
+ * before registration, and the application must remain resident afterward. */
 static int (*rtl8821cu_methods[])(device_t) = {
     rtl8821cu_match,
     rtl8821cu_attach,
@@ -130,9 +130,17 @@ int main(void)
     int registration;
     int choice;
 
+    /* Required by the original Ndless HIDn driver pattern. Without this,
+     * callback pointers in the resident USB driver table are not relocated. */
+    nl_relocdata((unsigned *)rtl8821cu_methods,
+        sizeof(rtl8821cu_methods) / sizeof(rtl8821cu_methods[0]) - 1);
+
     registration = usb_register_driver(
-        2, rtl8821cu_methods, "rtl8821cu-probe", 0,
+        2, rtl8821cu_methods, "rtl8821cu", 0,
         (unsigned int)sizeof(rtl8821cu_softc_t));
+
+    /* USB callbacks outlive main(); keep their code and state resident. */
+    nl_set_resident();
 
     for (;;) {
         show_report(registration);
