@@ -201,13 +201,13 @@ rtl8821cu_attach19.tns: rtl8821cu_attach19.elf
 	make-prg $@.zehn $@
 	rm -f $@.zehn
 
-src/rtl8821cu_modeswitch_app.o: src/rtl8821cu_modeswitch_app.c src/scsi_eject.h
+src/rtl8821cu_modeswitch_app.o: src/rtl8821cu_modeswitch_app.c
 	$(GCC) $(GCCFLAGS) -c $< -o $@
 
 rtl8821cu_usbdiag05.elf: src/rtl8821cu_modeswitch_app.o
 	$(LD) $^ -o $@
 
-rtl8821cu_modeswitch21.tns: rtl8821cu_modeswitch21.elf
+rtl8821cu_usbdiag05.tns: rtl8821cu_usbdiag05.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "RTL8821CU USB Diagnostic 0.5" --author "CX Internet" --notice "Diagnostic attachment USB en lecture seule" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
