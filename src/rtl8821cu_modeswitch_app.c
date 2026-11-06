@@ -45,6 +45,12 @@ static volatile int g_wifi_match;
 static volatile int g_wifi_attached;
 static volatile uint8_t g_bulk_in;
 static volatile uint8_t g_bulk_out;
+static volatile uint8_t g_seen_ifclass;
+static volatile uint8_t g_seen_ifsubclass;
+static volatile uint8_t g_seen_ifproto;
+static volatile int g_seen_product;
+static volatile int g_seen_ifaceno;
+static volatile int g_realtek_interfaces;
 
 static int rtl_mode_match(device_t self)
 {
@@ -59,20 +65,24 @@ static int rtl_mode_match(device_t self)
     if (id == NULL)
         return UMATCH_NONE;
 
-    if (uaa->product == RTL_PID_CDROM &&
-        uaa->ifaceno == 0 &&
-        id->bInterfaceClass == USB_CLASS_MASS_STORAGE &&
-        id->bInterfaceSubClass == USB_SUBCLASS_SCSI &&
-        id->bInterfaceProtocol == USB_PROTOCOL_BOT) {
+    /* Record the real descriptor before applying class-specific policy.
+     * The previous version rejected the interface inside match(), so attach()
+     * never ran when the adapter's descriptor differed from our assumption. */
+    g_realtek_interfaces++;
+    g_seen_product = uaa->product;
+    g_seen_ifaceno = uaa->ifaceno;
+    g_seen_ifclass = id->bInterfaceClass;
+    g_seen_ifsubclass = id->bInterfaceSubClass;
+    g_seen_ifproto = id->bInterfaceProtocol;
+
+    if (uaa->product == RTL_PID_CDROM && uaa->ifaceno == 0) {
         g_cd_match = 1;
-        return UMATCH_IFACECLASS_IFACESUBCLASS_IFACEPROTO;
+        return UMATCH_VENDOR_PRODUCT;
     }
 
-    if (uaa->product == RTL_PID_WIFI &&
-        uaa->ifaceno == USB_IFACE_WIFI &&
-        id->bInterfaceClass == USB_CLASS_VENDOR) {
+    if (uaa->product == RTL_PID_WIFI && uaa->ifaceno == USB_IFACE_WIFI) {
         g_wifi_match = 1;
-        return UMATCH_IFACECLASS;
+        return UMATCH_VENDOR_PRODUCT;
     }
 
     return UMATCH_NONE;
@@ -225,23 +235,29 @@ static int rtl_mode_attach(device_t self)
     sc->attached = 1;
 
     if (uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM &&
-        id->bInterfaceClass == USB_CLASS_MASS_STORAGE &&
-        id->bInterfaceSubClass == USB_SUBCLASS_SCSI &&
-        id->bInterfaceProtocol == USB_PROTOCOL_BOT) {
+        uaa->ifaceno == 0) {
         sc->mode = 1;
-        if (!g_eject_attempted) {
+        if (id->bInterfaceClass == USB_CLASS_MASS_STORAGE &&
+            id->bInterfaceSubClass == USB_SUBCLASS_SCSI &&
+            id->bInterfaceProtocol == USB_PROTOCOL_BOT) {
+            if (!g_eject_attempted) {
+                g_eject_attempted = 1;
+                g_eject_result = rtl_send_scsi_eject(uaa, sc);
+                sc->last_status = g_eject_result;
+            }
+        } else {
             g_eject_attempted = 1;
-            g_eject_result = rtl_send_scsi_eject(uaa, sc);
+            g_eject_result = -15; /* observed interface is not SCSI/BOT */
             sc->last_status = g_eject_result;
         }
         return 0;
     }
 
     if (uaa->vendor == RTL_VID && uaa->product == RTL_PID_WIFI &&
-        uaa->ifaceno == USB_IFACE_WIFI &&
-        id->bInterfaceClass == USB_CLASS_VENDOR) {
+        uaa->ifaceno == USB_IFACE_WIFI) {
         sc->mode = 2;
-        g_wifi_attached = 1;
+        if (id->bInterfaceClass == USB_CLASS_VENDOR)
+            g_wifi_attached = 1;
         return 0;
     }
 
@@ -288,6 +304,9 @@ static void show_report(int registration)
         "Commande SCSI eject : %s\n"
         "Code eject : %d\n"
         "Endpoints Bulk IN/OUT : 0x%02X / 0x%02X\n\n"
+        "Interfaces Realtek vues : %d\n"
+        "Derniere interface : PID %04X / IF %d\n"
+        "Classe/Subclasse/Proto : %02X/%02X/%02X\n"
         "Mode Wi-Fi 0BDA:C820 : %s\n\n"
         "Cette etape ne scanne pas encore les reseaux.\n"
         "Elle tente seulement le passage CD-ROM vers Wi-Fi.\n"
@@ -298,6 +317,9 @@ static void show_report(int registration)
         eject_text(g_eject_result),
         g_eject_result,
         (unsigned)g_bulk_in, (unsigned)g_bulk_out,
+        (int)g_realtek_interfaces, (unsigned)g_seen_product,
+        (int)g_seen_ifaceno, (unsigned)g_seen_ifclass,
+        (unsigned)g_seen_ifsubclass, (unsigned)g_seen_ifproto,
         g_wifi_attached ? "INTERFACE ATTACHEE" :
         (g_wifi_match ? "interface detectee, attach en attente" :
                         "pas encore detecte"));
