@@ -58,3 +58,10 @@ jobs:
           name: rtl8821cu-usbdiag-08
           path: rtl8821cu_usbdiag08.tns
           if-no-files-found: error
+
+      - name: Upload RTL8821CU Mode Switch 0.9
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl8821cu-modeswitch-09
+          path: rtl8821cu_modeswitch09.tns
+          if-no-files-found: error
