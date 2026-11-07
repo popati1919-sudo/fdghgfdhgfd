@@ -5,7 +5,7 @@ GENZEHN = genzehn
 
 GCCFLAGS = -Wall -W -marm -Os
 
-all: rtl8821cu_core.tns usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns rtl8821cu_core.tns rtl8821cu_core04.tns rtl8821cu_wifi05.tns rtl8821cu_attach19.tns rtl8821cu_usbdiag06.tns rtl8821cu_usbdiag07.tns rtl8821cu_usbdiag08.tns rtl8821cu_modeswitch09.tns
+all: rtl8821cu_core.tns usbprobe.tns usbprobe1b.tns usbprobe3.tns usbprobe4.tns usbprobe5.tns usbprobe6.tns usbprobe7.tns usbprobe8.tns usbprobe9.tns usbprobe15.tns usbprobe16.tns usbprobe17.tns usbprobe18.tns rtl8821cu_core.tns rtl8821cu_core04.tns rtl8821cu_wifi05.tns rtl8821cu_attach19.tns rtl8821cu_usbdiag06.tns rtl8821cu_usbdiag07.tns rtl8821cu_usbdiag08.tns rtl8821cu_modeswitch09.tns rtl8821cu_modeswitch10.tns
 
 src/%.o: src/%.c src/usbprobe_decode.h src/usb_spy.h src/usb_descriptors.h
 	$(GCC) $(GCCFLAGS) -c $< -o $@
@@ -242,5 +242,16 @@ rtl8821cu_modeswitch09.elf: src/rtl8821cu_modeswitch09_app.o
 
 rtl8821cu_modeswitch09.tns: rtl8821cu_modeswitch09.elf
 	$(GENZEHN) --input $< --output $@.zehn --name "RTL8821CU Mode Switch 0.9" --author "CX Internet" --notice "Preparation SCSI EJECT BOT sans transfert USB" --ndless-min 36
+	make-prg $@.zehn $@
+	rm -f $@.zehn
+
+src/rtl8821cu_modeswitch10_app.o: src/rtl8821cu_modeswitch10_app.c
+	$(GCC) $(GCCFLAGS) -c $< -o $@
+
+rtl8821cu_modeswitch10.elf: src/rtl8821cu_modeswitch10_app.o
+	$(LD) $^ -o $@
+
+rtl8821cu_modeswitch10.tns: rtl8821cu_modeswitch10.elf
+	$(GENZEHN) --input $< --output $@.zehn --name "RTL8821CU Mode Switch 1.0" --author "CX Internet" --notice "Ejection SCSI BOT live avec garde de compatibilite" --ndless-min 36
 	make-prg $@.zehn $@
 	rm -f $@.zehn
