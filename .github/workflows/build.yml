@@ -66,9 +66,9 @@ jobs:
           path: rtl8821cu_modeswitch09.tns
           if-no-files-found: error
 
-      - name: Upload RTL8821CU Mode Switch 1.2
+      - name: Upload RTL8821CU Mode Switch 1.3
         uses: actions/upload-artifact@v4
         with:
-          name: rtl8821cu-modeswitch-12
-          path: rtl8821cu_modeswitch12.tns
+          name: rtl8821cu-modeswitch-13
+          path: rtl8821cu_modeswitch13.tns
           if-no-files-found: error
