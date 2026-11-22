@@ -1,4 +1,4 @@
-/* RTL8821CU Mode Switch 1.1
+/* RTL8821CU Mode Switch 1.2
  * Real USB Mass-Storage BOT SCSI START STOP UNIT (LOEJ=1).
  * Strictly matches only 0BDA:1A2B, interface 08/06/50, with one Bulk IN
  * and one Bulk OUT endpoint discovered from live descriptors. User-confirmed.
@@ -38,6 +38,26 @@ static volatile unsigned cd_device_probes;
 static volatile int config_seen;
 
 static char config_report[100] = "En attente du CD-ROM";
+
+static char active_report[72] = "En attente du CD-ROM";
+
+static void read_active_configuration(usbd_device_handle dev) {
+    usb_device_request_t request = {0};
+    uint8_t active = 0;
+    int received = 0;
+    if (!dev) {
+        snprintf(active_report, sizeof(active_report), "Handle USB absent");
+        return;
+    }
+    request.bmRequestType = UT_READ_DEVICE;
+    request.bRequest = UR_GET_CONFIG;
+    USETW(request.wLength, sizeof(active));
+    usbd_status status = usbd_do_request_flags(dev, &request, &active, 0, &received, 1000);
+    if (status == USBD_NORMAL_COMPLETION && received == 1)
+        snprintf(active_report, sizeof(active_report), "%u", (unsigned)active);
+    else
+        snprintf(active_report, sizeof(active_report), "USB %d, recu %d/1", (int)status, received);
+}
 
 static void read_configuration(usbd_device_handle dev) {
     usb_device_request_t request = {0};
@@ -159,6 +179,7 @@ static int rtl10_match(device_t self) {
     }
     if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM && !uaa->iface) {
         ++cd_device_probes;
+        read_active_configuration(uaa->device);
         if (!uaa->device || !usbd_get_config_descriptor(uaa->device))
             read_configuration(uaa->device);
     }
@@ -262,7 +283,7 @@ int main(void) {
     nl_set_resident();
     for(;;) {
         snprintf(report,sizeof(report),
-          "Sondes interface / stockage : %u / %u\nDescripteur USB lu : %s\n\n"
+          "Config active a la sonde : %s\nSondes interface / stockage : %u / %u\nDescripteur USB lu : %s\n\n"
           "Enregistrement Ndless : %s (%d)\n"
           "Sondes CD-ROM sans iface : %u\n"
           "Configuration vue par ces sondes : %s\n"
@@ -270,13 +291,13 @@ int main(void) {
           "Adaptateur compatible attache : %s\n"
           "Endpoints Bulk IN/OUT : %s\n\n"
           "PID Wi-Fi 0BDA:C820 vu %s : %s",
-          (unsigned)interface_probes,(unsigned)storage_probes,config_report,reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
+          active_report,(unsigned)interface_probes,(unsigned)storage_probes,config_report,reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
           (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
           eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
           wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
-        show_msgbox("RTL8821CU Mode Switch 1.1",report);
+        show_msgbox("RTL8821CU Mode Switch 1.2",report);
         if(!g_attached || !g_sc) {
-            choice=show_msgbox_2b("MODE SWITCH 1.1",
+            choice=show_msgbox_2b("MODE SWITCH 1.2",
               "Actualise pour relire les observations USB.",
               "Actualiser","Quitter");
             if(choice!=1) break;
@@ -292,7 +313,7 @@ int main(void) {
             do_eject(g_sc,report,sizeof(report));
             show_msgbox("Resultat SCSI EJECT",report);
         }
-        choice=show_msgbox_2b("MODE SWITCH 1.1",
+        choice=show_msgbox_2b("MODE SWITCH 1.2",
           "Actualiser apres disparition/reconnexion USB ?",
           "Actualiser","Quitter");
         if(choice!=1) break;
