@@ -1,4 +1,4 @@
-/* RTL8821CU Mode Switch 1.0
+/* RTL8821CU Mode Switch 1.1
  * Real USB Mass-Storage BOT SCSI START STOP UNIT (LOEJ=1).
  * Strictly matches only 0BDA:1A2B, interface 08/06/50, with one Bulk IN
  * and one Bulk OUT endpoint discovered from live descriptors. User-confirmed.
@@ -97,10 +97,32 @@ static void read_configuration(usbd_device_handle dev) {
              (unsigned)iface->protocol, in, out);
 }
 
+static volatile unsigned interface_probes;
+static volatile unsigned storage_probes;
+
+/* An interface probe can omit the identifiers carried by the device probe. */
+static int storage_identity(struct usb_attach_arg *uaa) {
+    usb_device_request_t req = {0};
+    usb_device_descriptor_t desc = {0};
+    usbd_device_handle dev = NULL;
+    int received = 0;
+    if (uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM) return 1;
+    if (!uaa->iface || usbd_interface2device_handle(uaa->iface, &dev) != USBD_NORMAL_COMPLETION || !dev)
+        return 0;
+    req.bmRequestType = UT_READ_DEVICE;
+    req.bRequest = UR_GET_DESCRIPTOR;
+    USETW(req.wValue, UDESC_DEVICE << 8);
+    USETW(req.wLength, sizeof(desc));
+    if (usbd_do_request_flags(dev, &req, &desc, 0, &received, 1000) != USBD_NORMAL_COMPLETION ||
+        received != (int)sizeof(desc) || desc.bLength != sizeof(desc) || desc.bDescriptorType != UDESC_DEVICE)
+        return 0;
+    return UGETW(desc.idVendor) == RTL_VID && UGETW(desc.idProduct) == RTL_PID_CDROM;
+}
+
 static usbd_interface_handle find_storage(struct usb_attach_arg *uaa) {
     uint8_t count = 1;
     unsigned i;
-    if (!uaa || uaa->vendor != RTL_VID || uaa->product != RTL_PID_CDROM)
+    if (!uaa || (!uaa->iface && (uaa->vendor != RTL_VID || uaa->product != RTL_PID_CDROM)))
         return NULL;
     if (!uaa->iface) {
         if (!uaa->device || !usbd_get_config_descriptor(uaa->device))
@@ -117,12 +139,20 @@ static usbd_interface_handle find_storage(struct usb_attach_arg *uaa) {
         if (!iface) continue;
         id = usbd_get_interface_descriptor(iface);
         if (id && id->bInterfaceClass == 8 && id->bInterfaceSubClass == 6 &&
-            id->bInterfaceProtocol == 0x50) return iface;
+            id->bInterfaceProtocol == 0x50) {
+            if (storage_identity(uaa)) return iface;
+        }
     }
     return NULL;
 }
 static int rtl10_match(device_t self) {
     struct usb_attach_arg *uaa=(struct usb_attach_arg *)device_get_ivars(self);
+    if (uaa && uaa->iface) {
+        usb_interface_descriptor_t *id = usbd_get_interface_descriptor(uaa->iface);
+        ++interface_probes;
+        if (id && id->bInterfaceClass == 8 && id->bInterfaceSubClass == 6 &&
+            id->bInterfaceProtocol == 0x50) ++storage_probes;
+    }
     if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_WIFI) {
         ++wifi_observations;
         return UMATCH_NONE;
@@ -232,7 +262,7 @@ int main(void) {
     nl_set_resident();
     for(;;) {
         snprintf(report,sizeof(report),
-          "RTL8821CU - DESCRIPTEUR COMPLET\nDescripteur USB lu : %s\n\n"
+          "Sondes interface / stockage : %u / %u\nDescripteur USB lu : %s\n\n"
           "Enregistrement Ndless : %s (%d)\n"
           "Sondes CD-ROM sans iface : %u\n"
           "Configuration vue par ces sondes : %s\n"
@@ -240,13 +270,13 @@ int main(void) {
           "Adaptateur compatible attache : %s\n"
           "Endpoints Bulk IN/OUT : %s\n\n"
           "PID Wi-Fi 0BDA:C820 vu %s : %s",
-          config_report,reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
+          (unsigned)interface_probes,(unsigned)storage_probes,config_report,reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
           (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
           eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
           wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
-        show_msgbox("RTL8821CU Mode Switch 1.0",report);
+        show_msgbox("RTL8821CU Mode Switch 1.1",report);
         if(!g_attached || !g_sc) {
-            choice=show_msgbox_2b("MODE SWITCH 1.0",
+            choice=show_msgbox_2b("MODE SWITCH 1.1",
               "Actualise pour relire les observations USB.",
               "Actualiser","Quitter");
             if(choice!=1) break;
@@ -262,7 +292,7 @@ int main(void) {
             do_eject(g_sc,report,sizeof(report));
             show_msgbox("Resultat SCSI EJECT",report);
         }
-        choice=show_msgbox_2b("MODE SWITCH 1.0",
+        choice=show_msgbox_2b("MODE SWITCH 1.1",
           "Actualiser apres disparition/reconnexion USB ?",
           "Actualiser","Quitter");
         if(choice!=1) break;
