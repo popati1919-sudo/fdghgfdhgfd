@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include "usb_descriptors.h"
 
 #define RTL_VID 0x0bda
 #define RTL_PID_WIFI 0xc820
@@ -38,7 +39,7 @@ static volatile int config_seen;
 
 static char config_report[100] = "En attente du CD-ROM";
 
-static void read_config_header(usbd_device_handle dev) {
+static void read_configuration(usbd_device_handle dev) {
     usb_device_request_t request = {0};
     uint8_t header[USB_CONFIG_DESCRIPTOR_SIZE] = {0};
     int received = 0;
@@ -62,8 +63,38 @@ static void read_config_header(usbd_device_handle dev) {
         snprintf(config_report, sizeof(config_report), "Entete de configuration invalide");
         return;
     }
-    snprintf(config_report, sizeof(config_report), "Valeur %u, interfaces %u, taille %u",
-             (unsigned)header[5], (unsigned)header[4], total);
+    uint8_t raw[256];
+    CxiUsbConfiguration cfg;
+    if (total > sizeof(raw)) {
+        snprintf(config_report, sizeof(config_report), "Configuration trop longue : %u", total);
+        return;
+    }
+    USETW(request.wLength, total);
+    received = 0;
+    status = usbd_do_request_flags(dev, &request, raw, 0, &received, 1000);
+    if (status != USBD_NORMAL_COMPLETION || received != (int)total) {
+        snprintf(config_report, sizeof(config_report), "Lecture complete : USB %d, %d/%u octets",
+                 (int)status, received, total);
+        return;
+    }
+    if (memcmp(raw, header, sizeof(header)) ||
+        cxi_usb_parse_configuration(raw, total, &cfg) != CXI_USB_DESC_OK ||
+        cfg.interface_count != 1) {
+        snprintf(config_report, sizeof(config_report), "Configuration invalide ou plusieurs interfaces");
+        return;
+    }
+    CxiUsbInterface *iface = &cfg.interfaces[0];
+    unsigned in = 0, out = 0;
+    for (unsigned i = 0; i < cfg.endpoint_count; ++i) {
+        CxiUsbEndpoint *ep = &cfg.endpoints[i];
+        if ((ep->attributes & 3) != UE_BULK) continue;
+        if (ep->address & UE_DIR_IN) in = ep->address;
+        else out = ep->address;
+    }
+    snprintf(config_report, sizeof(config_report),
+             "Interface %u : %02X/%02X/%02X\nBulk annonce IN=%02X OUT=%02X",
+             (unsigned)iface->number, (unsigned)iface->klass, (unsigned)iface->subclass,
+             (unsigned)iface->protocol, in, out);
 }
 
 static usbd_interface_handle find_storage(struct usb_attach_arg *uaa) {
@@ -99,7 +130,7 @@ static int rtl10_match(device_t self) {
     if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM && !uaa->iface) {
         ++cd_device_probes;
         if (!uaa->device || !usbd_get_config_descriptor(uaa->device))
-            read_config_header(uaa->device);
+            read_configuration(uaa->device);
     }
     if (!find_storage(uaa)) return UMATCH_NONE;
     ++g_match;
@@ -201,16 +232,15 @@ int main(void) {
     nl_set_resident();
     for(;;) {
         snprintf(report,sizeof(report),
-          "RTL8821CU MODE SWITCH 1.0\n\n"
+          "RTL8821CU - DESCRIPTEUR COMPLET\nDescripteur USB lu : %s\n\n"
           "Enregistrement Ndless : %s (%d)\n"
           "Sondes CD-ROM sans iface : %u\n"
           "Configuration vue par ces sondes : %s\n"
-          "Descripteur USB lu : %s\n"
           "Match interface CD-ROM 08/06/50 : %d\n"
           "Adaptateur compatible attache : %s\n"
           "Endpoints Bulk IN/OUT : %s\n\n"
           "PID Wi-Fi 0BDA:C820 vu %s : %s",
-          reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",config_report,(int)g_match,g_attached?"OUI":"NON",
+          config_report,reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
           (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
           eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
           wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
