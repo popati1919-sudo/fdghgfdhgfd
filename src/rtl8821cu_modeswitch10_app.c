@@ -1,4 +1,4 @@
-/* RTL8821CU Mode Switch 1.4
+/* RTL8821CU Mode Switch 1.5
  * Real USB Mass-Storage BOT SCSI START STOP UNIT (LOEJ=1).
  * Strictly matches only 0BDA:1A2B, interface 08/06/50, with one Bulk IN
  * and one Bulk OUT endpoint discovered from live descriptors. User-confirmed.
@@ -41,8 +41,7 @@ static char config_report[100] = "En attente du CD-ROM";
 
 static char active_report[72] = "En attente du CD-ROM";
 
-static int arm_config_test;
-static char selection[100] = "En attente";
+static const char selection[] = "Observation seule";
 
 static int read_active_configuration(usbd_device_handle dev) {
     usb_device_request_t request = {0};
@@ -63,25 +62,14 @@ static int read_active_configuration(usbd_device_handle dev) {
     return status == USBD_NORMAL_COMPLETION && received == 1 ? active : -1;
 }
 
-/* Ndless resources/utils.c identifies these two builds by their OS vector.
- * Function names/addresses: MakeSyscalls/idc/OS_{ncas,cas}cx-4.2.0.idc.
- * USB configuration descriptor index zero advertises configuration value one. */
-typedef usbd_status (*HostSetConfig)(usbd_device_handle, int, int);
-static HostSetConfig host_set_config(void) {
-    switch (*(const volatile uint32_t *)0x10000020u) {
-        case 0x1039c7a0u: return (HostSetConfig)0x1049bcc0u;
-        case 0x1039cd20u: return (HostSetConfig)0x1049c240u;
-        default: return NULL;
-    }
-}
-static int read_configuration(usbd_device_handle dev) {
+static void read_configuration(usbd_device_handle dev) {
     usb_device_request_t request = {0};
     uint8_t header[USB_CONFIG_DESCRIPTOR_SIZE] = {0};
     int received = 0;
     usbd_status status;
     if (!dev) {
         snprintf(config_report, sizeof(config_report), "Handle USB absent");
-        return 0;
+        return;
     }
     request.bmRequestType = UT_READ_DEVICE;
     request.bRequest = UR_GET_DESCRIPTOR;
@@ -90,19 +78,19 @@ static int read_configuration(usbd_device_handle dev) {
     status = usbd_do_request_flags(dev, &request, header, 0, &received, 1000);
     if (status != USBD_NORMAL_COMPLETION || received != (int)sizeof(header)) {
         snprintf(config_report, sizeof(config_report), "Statut USB %d, recu %d/9", (int)status, received);
-        return 0;
+        return;
     }
     unsigned total = header[2] | ((unsigned)header[3] << 8);
     if (header[0] != sizeof(header) || header[1] != UDESC_CONFIG ||
         total < sizeof(header) || !header[5]) {
         snprintf(config_report, sizeof(config_report), "Entete de configuration invalide");
-        return 0;
+        return;
     }
     uint8_t raw[256];
     CxiUsbConfiguration cfg;
     if (total > sizeof(raw)) {
         snprintf(config_report, sizeof(config_report), "Configuration trop longue : %u", total);
-        return 0;
+        return;
     }
     USETW(request.wLength, total);
     received = 0;
@@ -110,13 +98,13 @@ static int read_configuration(usbd_device_handle dev) {
     if (status != USBD_NORMAL_COMPLETION || received != (int)total) {
         snprintf(config_report, sizeof(config_report), "Lecture complete : USB %d, %d/%u octets",
                  (int)status, received, total);
-        return 0;
+        return;
     }
     if (memcmp(raw, header, sizeof(header)) ||
         cxi_usb_parse_configuration(raw, total, &cfg) != CXI_USB_DESC_OK ||
         cfg.interface_count != 1) {
         snprintf(config_report, sizeof(config_report), "Configuration invalide ou plusieurs interfaces");
-        return 0;
+        return;
     }
     CxiUsbInterface *iface = &cfg.interfaces[0];
     unsigned in = 0, out = 0;
@@ -130,9 +118,7 @@ static int read_configuration(usbd_device_handle dev) {
              "Interface %u : %02X/%02X/%02X\nBulk annonce IN=%02X OUT=%02X",
              (unsigned)iface->number, (unsigned)iface->klass, (unsigned)iface->subclass,
              (unsigned)iface->protocol, in, out);
-    return cfg.configuration_value == 1 && iface->number == 0 && !iface->alternate &&
-           iface->klass == 8 && iface->subclass == 6 && iface->protocol == 0x50 &&
-           cfg.endpoint_count == 2 && in == 0x8a && out == 0x0b;
+
 }
 
 static volatile unsigned interface_probes;
@@ -199,8 +185,7 @@ static int rtl10_match(device_t self) {
         ++cd_device_probes;
         read_active_configuration(uaa->device);
         if (!uaa->device || !usbd_get_config_descriptor(uaa->device))
-            if (read_configuration(uaa->device) && arm_config_test && host_set_config())
-                return UMATCH_VENDOR_PRODUCT;
+            read_configuration(uaa->device);
     }
     if (!find_storage(uaa)) return UMATCH_NONE;
     ++g_match;
@@ -212,20 +197,7 @@ static int rtl10_attach(device_t self) {
     usbd_interface_handle iface = find_storage(uaa);
     uint8_t count=0, i;
     int found_in=0,found_out=0;
-    if (!sc) return -1;
-    if (!iface && arm_config_test && uaa && !uaa->iface && uaa->vendor == RTL_VID &&
-        uaa->product == RTL_PID_CDROM && uaa->device && host_set_config() &&
-        !usbd_get_config_descriptor(uaa->device) && read_configuration(uaa->device) &&
-        read_active_configuration(uaa->device) == 0) {
-        arm_config_test = 0;
-        usbd_status status = host_set_config()(uaa->device, 0, 0);
-        int active = read_active_configuration(uaa->device);
-        if (status == USBD_NORMAL_COMPLETION && active == 1)
-            iface = find_storage(uaa);
-        snprintf(selection, sizeof(selection), "USB %d, relu %d, interface %s",
-                 (int)status, active, iface ? "OUI" : "NON");
-    }
-    if (!iface) return -1;
+    if (!iface || !sc) return -1;
     memset(sc,0,sizeof(*sc));
     if(usbd_endpoint_count(iface,&count)!=USBD_NORMAL_COMPLETION) return -1;
     for(i=0;i<count;i++) {
@@ -311,10 +283,6 @@ int main(void) {
     char report[700];
     unsigned before_eject = 0;
     int eject_attempted = 0;
-    if (!host_set_config()) snprintf(selection, sizeof(selection), "OS non pris en charge");
-    arm_config_test = host_set_config() && show_msgbox_2b("Mode Switch 1.4",
-        "Configurer le CD-ROM Realtek avec la pile USB de la TI au branchement ?",
-        "Tester","Observer") == 1;
     reg=usb_register_driver(2,rtl10_methods,"rtl8821cu-ms10",0,sizeof(rtl10_softc));
     nl_set_resident();
     for(;;) {
@@ -331,9 +299,9 @@ int main(void) {
           (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
           eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
           wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
-        show_msgbox("RTL8821CU Mode Switch 1.4",report);
+        show_msgbox("RTL8821CU Mode Switch 1.5",report);
         if(!g_attached || !g_sc) {
-            choice=show_msgbox_2b("MODE SWITCH 1.4",
+            choice=show_msgbox_2b("MODE SWITCH 1.5",
               "Actualise pour relire les observations USB.",
               "Actualiser","Quitter");
             if(choice!=1) break;
@@ -349,11 +317,10 @@ int main(void) {
             do_eject(g_sc,report,sizeof(report));
             show_msgbox("Resultat SCSI EJECT",report);
         }
-        choice=show_msgbox_2b("MODE SWITCH 1.4",
+        choice=show_msgbox_2b("MODE SWITCH 1.5",
           "Actualiser apres disparition/reconnexion USB ?",
           "Actualiser","Quitter");
         if(choice!=1) break;
     }
-    arm_config_test = 0;
     _exit(0);
 }
