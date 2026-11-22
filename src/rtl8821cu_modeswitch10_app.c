@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #define RTL_VID 0x0bda
+#define RTL_PID_WIFI 0xc820
 #define RTL_PID_CDROM 0x1a2b
 #define BOT_CBW_LEN 31
 #define BOT_CSW_LEN 13
@@ -28,12 +29,17 @@ typedef struct {
 } rtl10_softc;
 
 static volatile int g_attached, g_detached, g_match;
-static volatile int g_last_status=-1;
+/* Match callbacks can occur for each interface. Track observations, not devices. */
+static volatile unsigned wifi_observations;
 static rtl10_softc *g_sc;
 
 static int rtl10_match(device_t self) {
     struct usb_attach_arg *uaa=(struct usb_attach_arg *)device_get_ivars(self);
     usb_interface_descriptor_t *id;
+    if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_WIFI) {
+        ++wifi_observations;
+        return UMATCH_NONE;
+    }
     if(!uaa || !uaa->iface || uaa->vendor!=RTL_VID || uaa->product!=RTL_PID_CDROM)
         return UMATCH_NONE;
     id=usbd_get_interface_descriptor(uaa->iface);
@@ -130,13 +136,14 @@ static int do_eject(rtl10_softc *sc,char *out,size_t cap) {
         return -6;
     }
     snprintf(out,cap,"Commande SCSI EJECT acceptee (CSW valide).\n"
-                    "Attends la disparition USB, puis rebranche l'antenne.\n"
-                    "Le PID C820 devra etre confirme separement.");
+                    "Laisse l'antenne branchee et choisis Actualiser pour verifier le PID C820.");
     return 0;
 }
 int main(void) {
     int reg,choice;
     char report[700];
+    unsigned before_eject = 0;
+    int eject_attempted = 0;
     reg=usb_register_driver(2,rtl10_methods,"rtl8821cu-ms10",0,sizeof(rtl10_softc));
     nl_set_resident();
     for(;;) {
@@ -146,13 +153,15 @@ int main(void) {
           "Match interface CD-ROM 08/06/50 : %d\n"
           "Adaptateur compatible attache : %s\n"
           "Endpoints Bulk IN/OUT : %s\n\n"
-          "Cette version envoie SCSI EJECT uniquement apres confirmation.",
+          "PID Wi-Fi 0BDA:C820 vu %s : %s",
           reg==0?"OK":"ECHEC",reg,(int)g_match,g_attached?"OUI":"NON",
-          (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES");
+          (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
+          eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
+          wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
         show_msgbox("RTL8821CU Mode Switch 1.0",report);
         if(!g_attached || !g_sc) {
             choice=show_msgbox_2b("MODE SWITCH 1.0",
-              "Branche l'antenne en mode CD-ROM 0BDA:1A2B puis actualise.",
+              "Actualise pour relire les observations USB.",
               "Actualiser","Quitter");
             if(choice!=1) break;
             continue;
@@ -162,8 +171,9 @@ int main(void) {
           "EJECTER","Annuler");
         if(choice!=1) break;
         {
-            int result=do_eject(g_sc,report,sizeof(report));
-            g_last_status=result;
+            before_eject = wifi_observations;
+            eject_attempted = 1;
+            do_eject(g_sc,report,sizeof(report));
             show_msgbox("Resultat SCSI EJECT",report);
         }
         choice=show_msgbox_2b("MODE SWITCH 1.0",
