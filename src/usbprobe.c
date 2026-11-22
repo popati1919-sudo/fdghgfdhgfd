@@ -17,7 +17,8 @@ int main(void)
 {
     uint32_t asic = rd(0x900a0000U);
     ProbeMap map;
-    char text[512];
+    char text[640], details[512];
+    const char *previous = NULL;
 
     if (!probe_map_for_asic(asic, &map)) {
         snprintf(text, sizeof text,
@@ -27,11 +28,9 @@ int main(void)
         return 0;
     }
 
-    show_msgbox("CX Internet - Sonde USB",
-                "Etape 1: lecture seule, rien n'est modifie.\n\n"
-                "1) Branche le cable OTG (mini-USB vers USB-A) et l'antenne.\n"
-                "2) Appuie sur Entree pour lire l'etat.\n"
-                "3) Note ce qui s'affiche et envoie-le moi.");
+    show_msgbox("Sonde USB - comparaison",
+                "Premiere lecture : laisse le port dans son etat actuel.\n"
+                "Relire compare avec la lecture precedente. Quitter ferme la sonde.");
 
     for (;;) {
         ProbeSample s;
@@ -40,7 +39,17 @@ int main(void)
         s.status = rd(map.command + 4U);
         s.port = rd(map.port);
         s.otg = rd(map.otg);
-        probe_describe(asic, &map, &s, text, sizeof text);
+        ProbeVerdict verdict = probe_describe(asic, &map, &s, details, sizeof details);
+        const char *current;
+        switch (verdict) {
+        case PROBE_DEVICE_PRESENT: current = "Appareil present"; break;
+        case PROBE_ADAPTER_NO_DEVICE: current = "OTG seul"; break;
+        case PROBE_NO_ADAPTER: current = "Sans OTG"; break;
+        default: current = "Lecture incertaine"; break;
+        }
+        snprintf(text, sizeof text, "Avant : %s\nMaintenant : %s\n\n%s",
+                 previous ? previous : "Premiere lecture", current, details);
+        previous = current;
         if (show_msgbox_2b("Sonde USB", text, "Relire", "Quitter") != 1)
             break;
     }
