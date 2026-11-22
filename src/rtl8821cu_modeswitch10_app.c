@@ -36,6 +36,36 @@ static rtl10_softc *g_sc;
 static volatile unsigned cd_device_probes;
 static volatile int config_seen;
 
+static char config_report[100] = "En attente du CD-ROM";
+
+static void read_config_header(usbd_device_handle dev) {
+    usb_device_request_t request = {0};
+    uint8_t header[USB_CONFIG_DESCRIPTOR_SIZE] = {0};
+    int received = 0;
+    usbd_status status;
+    if (!dev) {
+        snprintf(config_report, sizeof(config_report), "Handle USB absent");
+        return;
+    }
+    request.bmRequestType = UT_READ_DEVICE;
+    request.bRequest = UR_GET_DESCRIPTOR;
+    USETW(request.wValue, UDESC_CONFIG << 8);
+    USETW(request.wLength, sizeof(header));
+    status = usbd_do_request_flags(dev, &request, header, 0, &received, 1000);
+    if (status != USBD_NORMAL_COMPLETION || received != (int)sizeof(header)) {
+        snprintf(config_report, sizeof(config_report), "Statut USB %d, recu %d/9", (int)status, received);
+        return;
+    }
+    unsigned total = header[2] | ((unsigned)header[3] << 8);
+    if (header[0] != sizeof(header) || header[1] != UDESC_CONFIG ||
+        total < sizeof(header) || !header[5]) {
+        snprintf(config_report, sizeof(config_report), "Entete de configuration invalide");
+        return;
+    }
+    snprintf(config_report, sizeof(config_report), "Valeur %u, interfaces %u, taille %u",
+             (unsigned)header[5], (unsigned)header[4], total);
+}
+
 static usbd_interface_handle find_storage(struct usb_attach_arg *uaa) {
     uint8_t count = 1;
     unsigned i;
@@ -66,8 +96,11 @@ static int rtl10_match(device_t self) {
         ++wifi_observations;
         return UMATCH_NONE;
     }
-    if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM && !uaa->iface)
+    if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM && !uaa->iface) {
         ++cd_device_probes;
+        if (!uaa->device || !usbd_get_config_descriptor(uaa->device))
+            read_config_header(uaa->device);
+    }
     if (!find_storage(uaa)) return UMATCH_NONE;
     ++g_match;
     return uaa->iface ? UMATCH_IFACECLASS_IFACESUBCLASS_IFACEPROTO : UMATCH_VENDOR_PRODUCT;
@@ -172,11 +205,12 @@ int main(void) {
           "Enregistrement Ndless : %s (%d)\n"
           "Sondes CD-ROM sans iface : %u\n"
           "Configuration vue par ces sondes : %s\n"
+          "Descripteur USB lu : %s\n"
           "Match interface CD-ROM 08/06/50 : %d\n"
           "Adaptateur compatible attache : %s\n"
           "Endpoints Bulk IN/OUT : %s\n\n"
           "PID Wi-Fi 0BDA:C820 vu %s : %s",
-          reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
+          reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",config_report,(int)g_match,g_attached?"OUI":"NON",
           (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
           eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
           wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
