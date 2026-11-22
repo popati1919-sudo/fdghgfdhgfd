@@ -33,36 +33,56 @@ static volatile int g_attached, g_detached, g_match;
 static volatile unsigned wifi_observations;
 static rtl10_softc *g_sc;
 
+static volatile unsigned cd_device_probes;
+static volatile int config_seen;
+
+static usbd_interface_handle find_storage(struct usb_attach_arg *uaa) {
+    uint8_t count = 1;
+    unsigned i;
+    if (!uaa || uaa->vendor != RTL_VID || uaa->product != RTL_PID_CDROM)
+        return NULL;
+    if (!uaa->iface) {
+        if (!uaa->device || !usbd_get_config_descriptor(uaa->device))
+            return NULL;
+        config_seen = 1;
+        if (usbd_interface_count(uaa->device, &count) != USBD_NORMAL_COMPLETION)
+            return NULL;
+    }
+    for (i = 0; i < count; ++i) {
+        usbd_interface_handle iface = uaa->iface;
+        usb_interface_descriptor_t *id;
+        if (!iface && usbd_device2interface_handle(uaa->device, i, &iface) != USBD_NORMAL_COMPLETION)
+            continue;
+        if (!iface) continue;
+        id = usbd_get_interface_descriptor(iface);
+        if (id && id->bInterfaceClass == 8 && id->bInterfaceSubClass == 6 &&
+            id->bInterfaceProtocol == 0x50) return iface;
+    }
+    return NULL;
+}
 static int rtl10_match(device_t self) {
     struct usb_attach_arg *uaa=(struct usb_attach_arg *)device_get_ivars(self);
-    usb_interface_descriptor_t *id;
     if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_WIFI) {
         ++wifi_observations;
         return UMATCH_NONE;
     }
-    if(!uaa || !uaa->iface || uaa->vendor!=RTL_VID || uaa->product!=RTL_PID_CDROM)
-        return UMATCH_NONE;
-    id=usbd_get_interface_descriptor(uaa->iface);
-    if(!id || id->bInterfaceClass!=0x08 || id->bInterfaceSubClass!=0x06 ||
-       id->bInterfaceProtocol!=0x50) return UMATCH_NONE;
+    if (uaa && uaa->vendor == RTL_VID && uaa->product == RTL_PID_CDROM && !uaa->iface)
+        ++cd_device_probes;
+    if (!find_storage(uaa)) return UMATCH_NONE;
     ++g_match;
-    return UMATCH_IFACECLASS_IFACESUBCLASS_IFACEPROTO;
+    return uaa->iface ? UMATCH_IFACECLASS_IFACESUBCLASS_IFACEPROTO : UMATCH_VENDOR_PRODUCT;
 }
 static int rtl10_attach(device_t self) {
     struct usb_attach_arg *uaa=(struct usb_attach_arg *)device_get_ivars(self);
     rtl10_softc *sc=(rtl10_softc *)device_get_softc(self);
-    usb_interface_descriptor_t *id;
+    usbd_interface_handle iface = find_storage(uaa);
     uint8_t count=0, i;
     int found_in=0,found_out=0;
-    if(!uaa || !uaa->iface || !sc || uaa->vendor!=RTL_VID ||
-       uaa->product!=RTL_PID_CDROM) return -1;
-    id=usbd_get_interface_descriptor(uaa->iface);
-    if(!id || id->bInterfaceClass!=0x08 || id->bInterfaceSubClass!=0x06 ||
-       id->bInterfaceProtocol!=0x50) return -1;
+    if (!iface || !sc) return -1;
     memset(sc,0,sizeof(*sc));
-    if(usbd_endpoint_count(uaa->iface,&count)!=USBD_NORMAL_COMPLETION) return -1;
+    if(usbd_endpoint_count(iface,&count)!=USBD_NORMAL_COMPLETION) return -1;
     for(i=0;i<count;i++) {
-        usb_endpoint_descriptor_t *ep=usbd_get_endpoint_descriptor(uaa->iface,i);
+        usb_endpoint_descriptor_t *ep=usbd_get_endpoint_descriptor(iface,i);
         if(!ep || (ep->bmAttributes & UE_XFERTYPE)!=UE_BULK) continue;
         if((ep->bEndpointAddress & UE_DIR_IN) && !found_in) {
             sc->ep_in=ep->bEndpointAddress; sc->mps_in=UGETW(ep->wMaxPacketSize); found_in=1;
@@ -71,8 +91,8 @@ static int rtl10_attach(device_t self) {
         }
     }
     if(!found_in || !found_out) return -1;
-    if(usbd_interface2device_handle(uaa->iface,&sc->dev)!=USBD_NORMAL_COMPLETION) return -1;
-    sc->iface=uaa->iface; sc->attached=1; g_sc=sc; g_attached=1;
+    if(usbd_interface2device_handle(iface,&sc->dev)!=USBD_NORMAL_COMPLETION) return -1;
+    sc->iface=iface; sc->attached=1; g_sc=sc; g_attached=1;
     return 0;
 }
 static int rtl10_detach(device_t self) {
@@ -150,11 +170,13 @@ int main(void) {
         snprintf(report,sizeof(report),
           "RTL8821CU MODE SWITCH 1.0\n\n"
           "Enregistrement Ndless : %s (%d)\n"
+          "Sondes CD-ROM sans iface : %u\n"
+          "Configuration vue par ces sondes : %s\n"
           "Match interface CD-ROM 08/06/50 : %d\n"
           "Adaptateur compatible attache : %s\n"
           "Endpoints Bulk IN/OUT : %s\n\n"
           "PID Wi-Fi 0BDA:C820 vu %s : %s",
-          reg==0?"OK":"ECHEC",reg,(int)g_match,g_attached?"OUI":"NON",
+          reg==0?"OK":"ECHEC",reg,(unsigned)cd_device_probes,config_seen?"OUI":"PAS ENCORE",(int)g_match,g_attached?"OUI":"NON",
           (g_attached && g_sc)?"DETECTES":"NON DISPONIBLES",
           eject_attempted ? "depuis la tentative EJECT" : "depuis le lancement",
           wifi_observations != before_eject ? "OUI" : "PAS ENCORE");
